@@ -1,1 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Procedural Typesetting Engine</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Ableton-inspired Swiss UI variables */
+            --ui-bg: #e6e6e6;
+            --ui-panel: #d4d4d4;
+            --ui-text: #1a1a1a;
+            --ui-text-muted: #666666;
+            --primary-blue: rgb(0, 0, 255);
+            --border-color: #b3b3b3;
+            
+            /* Document Variables (Defaults dynamically updated by JS) */
+            --doc-width: 148mm;
+            --doc-height: 210mm;
+            --m-top: 16mm;
+            --m-bottom: 24mm;
+            --m-inside: 16mm;
+            --m-outside: 20mm;
+            
+            --grid-cols: 4;
+            --grid-gutter: 4.233mm;
+            --guide-rows: 4;
+            --guide-cols: 2;
+            --guide-rgutter: 4mm;
+            --guide-cgutter: 4mm;
+        }
 
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'IBM Plex Sans', sans-serif;
+            background-color: #f0f0f0;
+            color: var(--ui-text);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            font-size: 13px;
+        }
+
+        /* === UI PANEL === */
+        #ui-panel {
+            width: 320px;
+            min-width: 320px;
+            background-color: var(--ui-panel);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            z-index: 10;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.05);
+        }
+
+        header {
+            padding: 20px;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        header h1 {
+            font-size: 16px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Accordions */
+        details.accordion {
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        details.accordion summary {
+            padding: 12px 20px;
+            font-weight: 600;
+            cursor: pointer;
+            list-style: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #c9c9c9;
+            user-select: none;
+            transition: background 0.2s ease;
+        }
+
+        details.accordion summary::-webkit-details-marker {
+            display: none;
+        }
+
+        details.accordion summary:hover {
+            background-color: #c0c0c0;
+        }
+
+        /* The Roof/Arrow Indicator */
+        details.accordion summary .arrow {
+            width: 0; 
+            height: 0; 
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            border-top: 5px solid var(--ui-text);
+            transition: transform 0.2s ease;
+        }
+
+        details[open].accordion summary .arrow {
+            transform: rotate(180deg);
+        }
+
+        .accordion-content {
+            padding: 20px;
+            background-color: var(--ui-bg);
+        }
+
+        /* Controls */
+        .subsection-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: var(--ui-text-muted);
+            margin: 15px 0 10px 0;
+            letter-spacing: 0.5px;
+        }
+
+        .control-group {
+            margin-bottom: 12px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .control-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .control-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        label {
+            font-size: 11px;
+            margin-bottom: 4px;
+            font-weight: 500;
+        }
+
+        input[type="text"], input[type="number"], select {
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            padding: 6px 8px;
+            font-family: 'IBM Plex Sans', sans-serif;
+            font-size: 12px;
+            border-radius: 2px;
+            outline: none;
+            transition: border 0.2s;
+        }
+
+        input:focus, select:focus {
+            border-color: var(--primary-blue);
+        }
+
+        .checkbox-group {
+            flex-direction: row;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .checkbox-group input {
+            accent-color: var(--primary-blue);
+        }
+
+        .help-text {
+            font-size: 10px;
+            color: var(--ui-text-muted);
+            margin-top: 4px;
+        }
+
+        /* Drag and Drop Zone */
+        .drop-zone {
+            border: 1px dashed var(--border-color);
+            background: #f9f9f9;
+            padding: 20px;
+            text-align: center;
+            font-size: 11px;
+            color: var(--ui-text-muted);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-bottom: 10px;
+        }
+
+        .drop-zone.dragover {
+            background: #e0e0ff;
+            border-color: var(--primary-blue);
+            color: var(--primary-blue);
+        }
+
+        .custom-style-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .custom-style-row h4 { font-size: 12px; width: 30px; }
+        .style-btn {
+            background: transparent; border: 1px solid var(--border-color);
+            padding: 4px 8px; cursor: pointer; border-radius: 2px;
+        }
+        .style-btn:hover { background: #dcdcdc; }
+        .style-btn.active { background: var(--primary-blue); color: white; border-color: var(--primary-blue); }
+
+        .primary-btn {
+            background-color: var(--primary-blue);
+            color: white;
+            border: none;
+            padding: 10px;
+            width: 100%;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 2px;
+            margin-top: 15px;
+            transition: opacity 0.2s;
+        }
+        .primary-btn:hover { opacity: 0.8; }
+
+        /* === WORKSPACE === */
+        #workspace {
+            flex: 1;
+            background-color: #a0a0a0;
+            position: relative;
+            cursor: grab;
+            overflow: hidden; /* We handle panning via transform */
+        }
+
+        #workspace:active { cursor: grabbing; }
+
+        #canvas {
+            transform-origin: 0 0;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+        }
+
+        #document-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            padding: 40px;
+            width: calc((var(--doc-width) * 2) + 100px); /* accommodates spreads */
+        }
+
+        /* The Procedural Page Element */
+        .page {
+            width: var(--doc-width);
+            height: var(--doc-height);
+            background-color: white;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+            /* Typesetting Rules */
+            text-align: justify;
+            hyphens: auto;
+            hanging-punctuation: first last;
+        }
+
+        /* Facing Pages Logic via nth-child */
+        .page:nth-child(odd) {
+            padding: var(--m-top) var(--m-outside) var(--m-bottom) var(--m-inside);
+        }
+        .page:nth-child(even) {
+            padding: var(--m-top) var(--m-inside) var(--m-bottom) var(--m-outside);
+        }
+
+        /* CSS Grid for Columns & Müller-Brockmann Guides */
+        .page-content {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            /* Setup Columns */
+            column-count: var(--grid-cols);
+            column-gap: var(--grid-gutter);
+        }
+
+        /* Procedural Grid Overlay Overlay */
+        .grid-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            pointer-events: none;
+            display: grid;
+            grid-template-columns: repeat(var(--guide-cols), 1fr);
+            grid-template-rows: repeat(var(--guide-rows), 1fr);
+            column-gap: var(--guide-cgutter);
+            row-gap: var(--guide-rgutter);
+            z-index: 100;
+        }
+
+        .grid-overlay .grid-cell {
+            border: 1px solid rgba(0, 255, 255, 0.4); /* Cyan reference lines */
+        }
+        .grid-overlay .grid-cell::after {
+            content: '';
+            display: block;
+            width: 100%; height: 100%;
+            border: 1px solid rgba(255, 0, 255, 0.2); /* Magenta columns */
+        }
+    </style>
+</head>
+<body>
+    <!-- UI PANEL -->
+    <aside id="ui-panel">
+        <header>
+            <h1>Typesetting Engine</h1>
+        </header>
+
+        <!-- 1. Document Setup -->
+        <details class="accordion" open>
+            <summary>1. Document Setup <span class="arrow"></span></summary>
+            <div class="accordion-content">
+                
+                <div class="control-group">
+                    <label>Preset</label>
+                    <select id="doc-preset">
+                        <option value="A4">DIN A4</option>
+                        <option value="A5" selected>DIN A5</option>
+                        <option value="A6">DIN A6</option>
+                    </select>
+                </div>
+
+                <div class="control-row">
+                    <div class="control-group">
+                        <label>Pages</label>
+                        <input type="number" id="page-count" value="20">
+                    </div>
+                    <div class="control-group checkbox-group">
+                        <input type="checkbox" id="facing-pages" checked>
+                        <label for="facing-pages">Facing Pages</label>
+                    </div>
+                </div>
+
+                <h3 class="subsection-title">1.1 Margins & Columns</h3>
+                <div class="control-grid">
+                    <div class="control-group"><label>Top</label><input type="text" id="margin-top" value="16 mm"></div>
+                    <div class="control-group"><label>Bottom</label><input type="text" id="margin-bottom" value="24 mm"></div>
+                    <div class="control-group"><label>Inside</label><input type="text" id="margin-inside" value="16 mm"></div>
+                    <div class="control-group"><label>Outside</label><input type="text" id="margin-outside" value="20 mm"></div>
+                </div>
+                <div class="control-row">
+                    <div class="control-group"><label>Columns</label><input type="number" id="col-count" value="4"></div>
+                    <div class="control-group"><label>Gutter</label><input type="text" id="col-gutter" value="4.233 mm"></div>
+                </div>
+
+                <h3 class="subsection-title">1.2 Grids & Guides</h3>
+                <div class="control-group">
+                    <label>Grid System Preset</label>
+                    <select id="grid-preset">
+                        <option value="mb-32">Müller-Brockmann 32-Field</option>
+                        <option value="custom">Custom Guides</option>
+                    </select>
+                </div>
+                <div class="control-grid">
+                    <div class="control-group"><label>Rows</label><input type="number" id="guide-rows" value="4"></div>
+                    <div class="control-group"><label>R-Gutter</label><input type="text" id="guide-rgutter" value="4 mm"></div>
+                    <div class="control-group"><label>Cols</label><input type="number" id="guide-cols" value="2"></div>
+                    <div class="control-group"><label>C-Gutter</label><input type="text" id="guide-cgutter" value="4 mm"></div>
+                </div>
+
+                <h3 class="subsection-title">1.3 & 1.4 Extras</h3>
+                <div class="control-group checkbox-group">
+                    <input type="checkbox" id="baseline-grid" checked>
+                    <label for="baseline-grid">Show Baseline Grid</label>
+                </div>
+                <div class="control-group checkbox-group">
+                    <input type="checkbox" id="cover-pages">
+                    <label for="cover-pages">Add Cover Pages</label>
+                </div>
+                <div class="control-group checkbox-group">
+                    <input type="checkbox" id="page-numbers" checked>
+                    <label for="page-numbers">Page Numbering</label>
+                </div>
+                <div class="control-group checkbox-group">
+                    <input type="checkbox" id="toc">
+                    <label for="toc">Generate TOC</label>
+                </div>
+
+            </div>
+        </details>
+
+        <!-- 2. Paragraph Styles -->
+        <details class="accordion">
+            <summary>2. Paragraph Styles <span class="arrow"></span></summary>
+            <div class="accordion-content">
+                
+                <div class="control-group checkbox-group">
+                    <input type="checkbox" id="auto-styles" checked>
+                    <label for="auto-styles">Automatic Paragraph Styles</label>
+                    <small class="help-text">Uncheck to configure custom styles.</small>
+                </div>
+
+                <div id="auto-style-section">
+                    <div class="drop-zone" id="global-font-drop">
+                        Drop Font Family Here (.ttf, .woff2)
+                    </div>
+                </div>
+
+                <div id="custom-style-section" style="display: none;">
+                    <!-- Custom Style Rows generated by JS -->
+                </div>
+
+                <h3 class="subsection-title">2.4 H&J Settings</h3>
+                <div class="control-group">
+                    <label>Hyphenation</label>
+                    <select id="hj-hyphenation">
+                        <option value="auto">Auto (Browser Dictionary)</option>
+                        <option value="none">None</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label>Justification Engine</label>
+                    <select id="hj-justification">
+                        <option value="inter-word">Inter-Word (Modern CSS)</option>
+                        <option value="inter-character">Inter-Character</option>
+                    </select>
+                </div>
+
+            </div>
+        </details>
+
+        <!-- 3. Export -->
+        <details class="accordion">
+            <summary>3. Export <span class="arrow"></span></summary>
+            <div class="accordion-content">
+                <div class="control-group">
+                    <label>Adobe PDF Preset</label>
+                    <select>
+                        <option>[High Quality Print] (modified)</option>
+                        <option>[Press Quality]</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label>Standard</label>
+                    <select>
+                        <option>PDF/X-4:2010</option>
+                        <option>None</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label>Compatibility</label>
+                    <select>
+                        <option>Acrobat 7 (PDF 1.6)</option>
+                        <option>Acrobat 8/9 (PDF 1.7)</option>
+                    </select>
+                </div>
+                <button id="btn-export" class="primary-btn">Export PDF</button>
+            </div>
+        </details>
+    </aside>
+
+    <!-- WORKSPACE -->
+    <main id="workspace">
+        <div id="canvas">
+            <div id="document-container">
+                <!-- Pages generated via JS -->
+            </div>
+        </div>
+    </main>
+
+    <script>
+        /**
+         * Procedural Typesetting Engine
+         * Author: Professor / Senior Dev
+         * Focus: Performance, Gestalt UI, Procedural Müller-Brockmann Grid Systems
+         */
+        class TypesettingEngine {
+            constructor() {
+                this.workspace = document.getElementById('workspace');
+                this.canvas = document.getElementById('canvas');
+                this.docContainer = document.getElementById('document-container');
+                
+                // Workspace Pan/Zoom State
+                this.scale = 1;
+                this.translateX = -400; // Initial center offset
+                this.translateY = -300;
+                this.isPanning = false;
+                this.startX = 0;
+                this.startY = 0;
+
+                this.initWorkspace();
+                this.initUIListeners();
+                this.renderPages();
+                this.buildCustomStylesUI();
+            }
+
+            // 1. Workspace Interaction (Trackpad / Mousewheel)
+            initWorkspace() {
+                this.updateCanvasTransform();
+
+                // Pan via drag
+                this.workspace.addEventListener('mousedown', (e) => {
+                    this.isPanning = true;
+                    this.startX = e.clientX - this.translateX;
+                    this.startY = e.clientY - this.translateY;
+                });
+
+                window.addEventListener('mouseup', () => this.isPanning = false);
+                window.addEventListener('mousemove', (e) => {
+                    if (!this.isPanning) return;
+                    this.translateX = e.clientX - this.startX;
+                    this.translateY = e.clientY - this.startY;
+                    this.updateCanvasTransform();
+                });
+
+                // Zoom via Trackpad / Ctrl+Scroll
+                this.workspace.addEventListener('wheel', (e) => {
+                    e.preventDefault();
+                    if (e.ctrlKey || e.metaKey) {
+                        // Zoom
+                        const zoomFactor = 0.05;
+                        const delta = e.deltaY < 0 ? 1 : -1;
+                        this.scale += delta * zoomFactor;
+                        this.scale = Math.max(0.1, Math.min(this.scale, 5)); // Limit zoom
+                    } else {
+                        // Pan
+                        this.translateX -= e.deltaX;
+                        this.translateY -= e.deltaY;
+                    }
+                    this.updateCanvasTransform();
+                }, { passive: false });
+            }
+
+            updateCanvasTransform() {
+                this.canvas.style.transform = `translate(${this.translateX}px, ${this.translateY}px) scale(${this.scale})`;
+            }
+
+            // 2. UI Event Listeners & CSS Variable Updates
+            initUIListeners() {
+                const updateCSSVar = (id, varName) => {
+                    document.getElementById(id).addEventListener('input', (e) => {
+                        let val = e.target.value;
+                        if (e.target.type === 'number' && !varName.includes('cols') && !varName.includes('rows')) val += 'mm'; 
+                        document.documentElement.style.setProperty(varName, val);
+                    });
+                };
+
+                // Document Setup
+                document.getElementById('doc-preset').addEventListener('change', (e) => {
+                    const sizes = { 'A4': ['210mm', '297mm'], 'A5': ['148mm', '210mm'], 'A6': ['105mm', '148mm'] };
+                    document.documentElement.style.setProperty('--doc-width', sizes[e.target.value][0]);
+                    document.documentElement.style.setProperty('--doc-height', sizes[e.target.value][1]);
+                });
+
+                updateCSSVar('margin-top', '--m-top');
+                updateCSSVar('margin-bottom', '--m-bottom');
+                updateCSSVar('margin-inside', '--m-inside');
+                updateCSSVar('margin-outside', '--m-outside');
+                
+                document.getElementById('col-count').addEventListener('input', (e) => {
+                    document.documentElement.style.setProperty('--grid-cols', e.target.value);
+                });
+                updateCSSVar('col-gutter', '--grid-gutter');
+
+                // Guides
+                document.getElementById('guide-rows').addEventListener('input', (e) => document.documentElement.style.setProperty('--guide-rows', e.target.value));
+                document.getElementById('guide-cols').addEventListener('input', (e) => document.documentElement.style.setProperty('--guide-cols', e.target.value));
+                updateCSSVar('guide-rgutter', '--guide-rgutter');
+                updateCSSVar('guide-cgutter', '--guide-cgutter');
+
+                document.getElementById('page-count').addEventListener('change', () => this.renderPages());
+
+                // Typography Settings UI Logic
+                const autoStyleCheck = document.getElementById('auto-styles');
+                const autoSec = document.getElementById('auto-style-section');
+                const customSec = document.getElementById('custom-style-section');
+
+                autoStyleCheck.addEventListener('change', (e) => {
+                    if(e.target.checked) {
+                        autoSec.style.display = 'block';
+                        customSec.style.display = 'none';
+                    } else {
+                        autoSec.style.display = 'none';
+                        customSec.style.display = 'block';
+                    }
+                });
+
+                // Setup Drag & Drop for Fonts
+                this.setupDropZone(document.getElementById('global-font-drop'), 'GlobalFont');
+
+                // Export System
+                document.getElementById('btn-export').addEventListener('click', () => this.exportPDF());
+            }
+
+            // 3. Custom Style Matrix Generation
+            buildCustomStylesUI() {
+                const customSec = document.getElementById('custom-style-section');
+                const styles = ['H1', 'H2', 'H3', 'Para', 'Bullet', 'PageNum'];
+                
+                styles.forEach(style => {
+                    const row = document.createElement('div');
+                    row.className = 'custom-style-row';
+                    
+                    const name = document.createElement('h4');
+                    name.innerText = style;
+                    
+                    const drop = document.createElement('div');
+                    drop.className = 'drop-zone';
+                    drop.style.padding = '5px';
+                    drop.style.flex = '1';
+                    drop.innerText = 'Drop Font';
+                    this.setupDropZone(drop, `Font_${style}`);
+
+                    const btnEdit = document.createElement('button');
+                    btnEdit.className = 'style-btn';
+                    btnEdit.innerText = 'Edit';
+
+                    const btnAB = document.createElement('button');
+                    btnAB.className = 'style-btn';
+                    btnAB.innerText = 'A/B';
+                    btnAB.addEventListener('click', () => btnAB.classList.toggle('active'));
+
+                    const btnAssign = document.createElement('button');
+                    btnAssign.className = 'style-btn active';
+                    btnAssign.innerText = 'Assign';
+
+                    row.append(name, drop, btnEdit, btnAB, btnAssign);
+                    customSec.appendChild(row);
+                });
+            }
+
+            // 4. File API Font Handling
+            setupDropZone(zone, fontFamilyName) {
+                zone.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    zone.classList.add('dragover');
+                });
+                zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+                zone.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    zone.classList.remove('dragover');
+                    const file = e.dataTransfer.files[0];
+                    if (file && (file.name.endsWith('.ttf') || file.name.endsWith('.woff2'))) {
+                        const fontUrl = URL.createObjectURL(file);
+                        const fontFace = new FontFace(fontFamilyName, `url(${fontUrl})`);
+                        fontFace.load().then(loadedFace => {
+                            document.fonts.add(loadedFace);
+                            zone.innerText = file.name;
+                            document.documentElement.style.setProperty(`--font-${fontFamilyName.toLowerCase()}`, fontFamilyName);
+                        });
+                    } else {
+                        console.warn("Please drop a valid .ttf or .woff2 file.");
+                    }
+                });
+            }
+
+            // 5. Procedural Rendering Engine
+            renderPages() {
+                const count = parseInt(document.getElementById('page-count').value) || 1;
+                this.docContainer.innerHTML = ''; // clear
+
+                // Generate DOM pages representing physical sheets
+                for (let i = 0; i < count; i++) {
+                    const page = document.createElement('div');
+                    page.className = 'page';
+                    
+                    const content = document.createElement('div');
+                    content.className = 'page-content';
+                    
+                    // Dummy procedural text representing layout
+                    content.innerHTML = `
+                        <h1 style="font-size: 24pt; margin-bottom: 12pt;">Müller-Brockmann System</h1>
+                        <p style="font-size: 10pt; line-height: 1.4; text-align: justify; hyphens: auto;">
+                            The grid system is an aid, not a guarantee. It permits a number of possible uses and each designer can look for a solution appropriate to his personal style. But one must learn how to use the grid; it is an art that requires practice. This procedural text acts as a placeholder to demonstrate the high-performance browser-native hyphenation and justification algorithms running underneath this hood.
+                        </p>
+                        <p style="font-size: 10pt; line-height: 1.4; text-align: justify; hyphens: auto; margin-top: 10pt;">
+                            Through absolute mathematical proportion, we create order.
+                        </p>
+                    `;
+
+                    // Inject Guide Overlay dynamically
+                    const gridOverlay = document.createElement('div');
+                    gridOverlay.className = 'grid-overlay';
+                    const cells = parseInt(document.getElementById('guide-rows').value) * parseInt(document.getElementById('guide-cols').value);
+                    for(let j=0; j<cells; j++) {
+                        const cell = document.createElement('div');
+                        cell.className = 'grid-cell';
+                        gridOverlay.appendChild(cell);
+                    }
+
+                    content.appendChild(gridOverlay);
+                    page.appendChild(content);
+                    this.docContainer.appendChild(page);
+                }
+            }
+
+            // 6. Export Pipeline
+            exportPDF() {
+                console.log("Preparing High Quality Print (PDF/X-4:2010 compatibility). Triggering browser Print to PDF engine...");
+                window.print();
+            }
+        }
+
+        // Initialize System on DOM Load
+        window.addEventListener('DOMContentLoaded', () => {
+            new TypesettingEngine();
+        });
+    </script>
+</body>
+</html>
