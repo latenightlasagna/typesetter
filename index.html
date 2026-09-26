@@ -207,6 +207,102 @@
         }
         .drop-zone svg { width: 24px; height: 24px; fill: currentColor; opacity: 0.5; }
 
+        /* Custom Styles UI */
+        .style-row-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .custom-style-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+            background: #fafafa;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 8px;
+            transition: all 0.2s ease;
+        }
+        
+        .style-name {
+            font-size: 12px;
+            font-weight: 600;
+            width: 40px;
+            color: var(--primary-blue);
+        }
+        
+        .style-drop {
+            flex: 1 1 100%; /* Full width when empty */
+            padding: 16px;
+            margin: 0;
+            min-width: 100px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        /* Shrunken state when font is loaded */
+        .style-drop.filled {
+            flex: 1 1 auto;
+            padding: 6px 10px;
+            background: rgba(0, 0, 255, 0.05);
+            border-style: solid;
+            border-color: var(--primary-blue);
+            color: var(--primary-blue);
+        }
+
+        .style-actions {
+            display: none; /* Hidden by default */
+            flex-direction: row;
+            gap: 4px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .style-drop.filled + .style-actions {
+            display: flex;
+            opacity: 1;
+        }
+        
+        .style-btn {
+            background: #ffffff; border: 1px solid var(--border-color);
+            padding: 4px 8px; cursor: pointer; border-radius: 3px;
+            font-size: 11px; font-weight: 500; font-family: 'IBM Plex Sans';
+            transition: all 0.2s;
+        }
+        .style-btn:hover { background: #eeeeee; }
+        .style-btn.ab-btn.active { background: #1a1a1a; color: white; border-color: #1a1a1a; }
+        .style-btn.assign-btn { background: var(--primary-blue); color: white; border-color: var(--primary-blue); }
+
+        /* Alignment & H&J UI */
+        .alignment-toolbar {
+            display: flex;
+            background: #f7f7f7;
+            border: 1px solid var(--border-color);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+        .align-btn {
+            flex: 1; background: transparent; border: none; padding: 8px;
+            border-right: 1px solid var(--border-color); cursor: pointer;
+            font-size: 14px; color: var(--ui-text-muted); transition: all 0.2s;
+        }
+        .align-btn:last-child { border-right: none; }
+        .align-btn:hover { background: #eeeeee; }
+        .align-btn.active { background: #e0e0ff; color: var(--primary-blue); box-shadow: inset 0 0 0 1px var(--primary-blue); }
+
+        .input-suffix {
+            display: flex; align-items: center; gap: 6px;
+        }
+        .input-suffix input { width: 50px; }
+        .input-suffix span { font-size: 11px; color: var(--ui-text-muted); }
+
+        .slider-group { padding: 8px 0; }
+        .slider-labels { display: flex; justify-content: space-between; font-size: 10px; font-weight: 500; margin-bottom: 6px; }
+        .slider { -webkit-appearance: none; width: 100%; height: 4px; border-radius: 2px; background: var(--border-color); outline: none; }
+        .slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 12px; height: 12px; border-radius: 50%; background: var(--ui-text); cursor: pointer; border: 2px solid white; box-shadow: 0 0 0 1px var(--ui-text); }
+
         .primary-btn {
             background-color: var(--primary-blue);
             color: white;
@@ -344,9 +440,13 @@
         .facing-enabled .page:nth-child(even) .page-number { left: var(--m-outside); }
         .facing-disabled .page .page-number { right: var(--m-outside); }
 
+        /* Toggle Extras Logic */
+        body.hide-extras .grid-overlay { display: none !important; }
+        body.hide-extras .page-content { background-image: none !important; }
+
     </style>
 </head>
-<body>
+<body class="show-extras">
     <aside id="ui-panel">
         <header>
             <h1>Typesetting Engine</h1>
@@ -421,11 +521,15 @@
                         <div class="control-group"><label>Baseline Color</label><input type="color" id="baseline-color-picker" value="#0096ff"></div>
                     </div>
                     <div class="control-group checkbox-row" style="margin-top: 8px;">
-                        <input type="checkbox" id="toggle-guides">
+                        <input type="checkbox" id="toggle-guides" checked>
                         <label for="toggle-guides">Show Structure Guides</label>
                     </div>
                     <div class="control-group checkbox-row">
-                        <input type="checkbox" id="baseline-grid">
+                        <input type="checkbox" id="show-extras" checked>
+                        <label for="show-extras">Show Extras <span style="opacity: 0.5; font-size: 10px; margin-left: 4px;">(Press W)</span></label>
+                    </div>
+                    <div class="control-group checkbox-row">
+                        <input type="checkbox" id="baseline-grid" checked>
                         <label for="baseline-grid">Show Baseline Grid (14pt)</label>
                     </div>
                 </div>
@@ -449,22 +553,72 @@
         <details class="accordion">
             <summary>2. Typography <span class="arrow"></span></summary>
             <div class="accordion-content">
+                
+                <!-- Font Assignment Card -->
                 <div class="gestalt-card">
-                    <h3 class="subsection-title">H&J Engine</h3>
+                    <div class="control-group checkbox-row">
+                        <input type="checkbox" id="auto-styles" checked>
+                        <label for="auto-styles">Automatic Paragraph Styles</label>
+                    </div>
+                    <div class="help-text" style="margin-bottom: 12px; margin-top:-4px;">Uncheck to configure custom styles individually.</div>
+                    
+                    <div id="auto-style-section">
+                        <div class="drop-zone" id="global-font-drop">
+                            <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                            Drop Font Family Here (.ttf, .woff2)
+                        </div>
+                    </div>
+
+                    <div id="custom-style-section" style="display: none;">
+                        <div class="style-row-container" id="custom-styles-container">
+                            <!-- Custom Style Rows will be generated by JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Alignment & Language Card -->
+                <div class="gestalt-card">
+                    <h3 class="subsection-title">Alignment & Language</h3>
                     <div class="control-group">
-                        <label>Hyphenation Dictionary</label>
-                        <select id="hj-hyphenation">
-                            <option value="auto">Auto (Browser Engine)</option>
-                            <option value="none">Disabled</option>
+                        <label>Dictionary (Native HarfBuzz)</label>
+                        <select id="doc-lang">
+                            <option value="en">English (US/UK)</option>
+                            <option value="de">German</option>
                         </select>
                     </div>
-                    <div class="control-group">
-                        <label>Justification Method</label>
-                        <select id="hj-justification">
-                            <option value="inter-word">Inter-Word (Optimal)</option>
-                            <option value="inter-character">Inter-Character</option>
-                        </select>
+                    <div class="alignment-toolbar" id="text-align-toolbar">
+                        <button class="align-btn" data-align="left" title="Align Left">⫷</button>
+                        <button class="align-btn" data-align="center" title="Align Center">⫸⫷</button>
+                        <button class="align-btn" data-align="right" title="Align Right">⫸</button>
+                        <button class="align-btn active" data-align="justify" title="Justify">≡</button>
+                        <button class="align-btn" data-align="justify-left" title="Justify (Left Last Line)">≣</button>
                     </div>
+                </div>
+
+                <!-- InDesign H&J Port Card -->
+                <div class="gestalt-card">
+                    <h3 class="subsection-title">Hyphenation Settings</h3>
+                    <div class="control-group checkbox-row" style="margin-bottom: 12px;">
+                        <input type="checkbox" id="hyph-enable" checked>
+                        <label for="hyph-enable">Hyphenate</label>
+                    </div>
+                    
+                    <div class="control-grid">
+                        <div class="control-group"><label>Words with at Least:</label><div class="input-suffix"><input type="number" id="hyph-words" value="5"><span>letters</span></div></div>
+                        <div class="control-group"><label>After First:</label><div class="input-suffix"><input type="number" id="hyph-after" value="2"><span>letters</span></div></div>
+                        <div class="control-group"><label>Before Last:</label><div class="input-suffix"><input type="number" id="hyph-before" value="2"><span>letters</span></div></div>
+                        <div class="control-group"><label>Hyphen Limit:</label><div class="input-suffix"><input type="number" id="hyph-limit" value="3"><span>hyphens</span></div></div>
+                        <div class="control-group" style="grid-column: 1 / -1;"><label>Hyphenation Zone:</label><div class="input-suffix"><input type="text" id="hyph-zone" value="16 mm"></div></div>
+                    </div>
+                    
+                    <div class="control-group slider-group" style="margin: 16px 0;">
+                        <div class="slider-labels"><span>Better Spacing</span><span>Fewer Hyphens</span></div>
+                        <input type="range" min="1" max="10" value="5" class="slider" title="Algorithm Priority">
+                    </div>
+
+                    <div class="control-group checkbox-row"><input type="checkbox" id="hyph-cap" checked><label for="hyph-cap">Hyphenate Capitalized Words</label></div>
+                    <div class="control-group checkbox-row"><input type="checkbox" id="hyph-last" checked><label for="hyph-last">Hyphenate Last Word</label></div>
+                    <div class="control-group checkbox-row"><input type="checkbox" id="hyph-col" checked><label for="hyph-col">Hyphenate Across Column</label></div>
                 </div>
             </div>
         </details>
@@ -490,7 +644,7 @@
 
     <main id="workspace">
         <div id="canvas">
-            <div id="document-container" class="facing-enabled show-guides show-baseline">
+            <div id="document-container" lang="en" class="facing-enabled show-guides show-baseline">
                 <!-- Pages flow here -->
             </div>
         </div>
@@ -518,6 +672,7 @@
                 this.initWorkspace();
                 this.initUIListeners();
                 this.initTextUploader();
+                this.initCustomStyles();
                 
                 // Initial Render
                 this.processText(this.defaultText);
@@ -526,6 +681,17 @@
             // --- 1. Workspace (Canvas) Interactions ---
             initWorkspace() {
                 this.updateCanvasTransform();
+                
+                // W-Key Extras Toggle Listener
+                window.addEventListener('keydown', (e) => {
+                    // Prevent toggle if user is typing in an input field
+                    if (e.key.toLowerCase() === 'w' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'SELECT') {
+                        const cb = document.getElementById('show-extras');
+                        cb.checked = !cb.checked;
+                        cb.dispatchEvent(new Event('change')); // Trigger UI update
+                    }
+                });
+
                 this.workspace.addEventListener('mousedown', (e) => {
                     this.isPanning = true;
                     this.startX = e.clientX - this.translateX;
@@ -633,9 +799,84 @@
                 document.getElementById('toggle-guides').addEventListener('change', (e) => {
                     e.target.checked ? this.docContainer.classList.add('show-guides') : this.docContainer.classList.remove('show-guides');
                 });
+
+                document.getElementById('show-extras').addEventListener('change', (e) => {
+                    e.target.checked ? document.body.classList.remove('hide-extras') : document.body.classList.add('hide-extras');
+                });
                 
                 document.getElementById('baseline-grid').addEventListener('change', (e) => {
                     e.target.checked ? this.docContainer.classList.add('show-baseline') : this.docContainer.classList.remove('show-baseline');
+                });
+
+                // Typography Toggles
+                const autoStylesCb = document.getElementById('auto-styles');
+                const autoSection = document.getElementById('auto-style-section');
+                const customSection = document.getElementById('custom-style-section');
+                autoStylesCb.addEventListener('change', (e) => {
+                    if (e.target.checked) {
+                        autoSection.style.display = 'block';
+                        customSection.style.display = 'none';
+                    } else {
+                        autoSection.style.display = 'none';
+                        customSection.style.display = 'block';
+                    }
+                });
+
+                // Language Setup
+                document.getElementById('doc-lang').addEventListener('change', (e) => {
+                    this.docContainer.setAttribute('lang', e.target.value);
+                });
+
+                // Alignment Toolbar Logic
+                const alignBtns = document.querySelectorAll('.align-btn');
+                alignBtns.forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        alignBtns.forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        const mode = btn.dataset.align;
+                        
+                        // Map specific UI states to CSS standards
+                        let textAlign = mode;
+                        let textAlignLast = 'auto';
+                        if (mode === 'justify-left') {
+                            textAlign = 'justify';
+                            textAlignLast = 'left';
+                        }
+                        
+                        document.documentElement.style.setProperty('--text-align', textAlign);
+                        document.documentElement.style.setProperty('--text-align-last', textAlignLast);
+                        
+                        // Inject dynamic style rule for global text update
+                        const styleSheet = document.createElement("style");
+                        styleSheet.innerText = `.page p { text-align: ${textAlign}; text-align-last: ${textAlignLast}; }`;
+                        document.head.appendChild(styleSheet);
+                    });
+                });
+
+                // Hyphenation Engine Variable Hooking
+                const applyHJEngine = () => {
+                    const enabled = document.getElementById('hyph-enable').checked;
+                    const minWords = document.getElementById('hyph-words').value;
+                    const before = document.getElementById('hyph-before').value;
+                    const after = document.getElementById('hyph-after').value;
+                    const limit = document.getElementById('hyph-limit').value;
+                    const zone = document.getElementById('hyph-zone').value;
+
+                    // Building standard CSS Text Module Level 4 properties
+                    const styleSheet = document.createElement("style");
+                    styleSheet.innerText = `
+                        .page p { 
+                            hyphens: ${enabled ? 'auto' : 'none'};
+                            hyphenate-limit-chars: ${minWords} ${before} ${after};
+                            hyphenate-limit-lines: ${limit};
+                            hyphenate-limit-zone: ${zone};
+                        }
+                    `;
+                    document.head.appendChild(styleSheet);
+                };
+
+                ['hyph-enable', 'hyph-words', 'hyph-before', 'hyph-after', 'hyph-limit', 'hyph-zone'].forEach(id => {
+                    document.getElementById(id).addEventListener('input', applyHJEngine);
                 });
 
                 // Trigger pagination reflow
@@ -672,6 +913,62 @@
                     } else {
                         console.warn("Unsupported file format.");
                     }
+                });
+            }
+
+            // --- 3.5 Custom Styles Generator ---
+            initCustomStyles() {
+                const container = document.getElementById('custom-styles-container');
+                const styles = ['H1', 'H2', 'H3', 'Para', 'Bullet', 'Page#'];
+
+                styles.forEach(style => {
+                    const row = document.createElement('div');
+                    row.className = 'custom-style-row';
+                    
+                    row.innerHTML = `
+                        <span class="style-name">${style}</span>
+                        <div class="drop-zone style-drop" id="drop-${style}">Drop Font</div>
+                        <div class="style-actions">
+                            <button class="style-btn" title="Edit Metrics">⚙</button>
+                            <button class="style-btn ab-btn" title="A/B Compare">A/B</button>
+                            <button class="style-btn assign-btn" title="Assign">Assign</button>
+                        </div>
+                    `;
+                    
+                    container.appendChild(row);
+                    const dropZone = row.querySelector('.style-drop');
+                    const abBtn = row.querySelector('.ab-btn');
+
+                    // A/B Toggle
+                    abBtn.addEventListener('click', () => abBtn.classList.toggle('active'));
+
+                    // Drop Logic
+                    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+                    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+                    dropZone.addEventListener('drop', async e => {
+                        e.preventDefault();
+                        dropZone.classList.remove('dragover');
+                        const file = e.dataTransfer.files[0];
+                        if (file && (file.name.match(/\.(ttf|woff2|otf)$/i))) {
+                            // UI State change -> Shrink the drop zone and show actions
+                            dropZone.classList.add('filled');
+                            dropZone.innerText = file.name.substring(0, 10) + '...';
+                            
+                            // Load font dynamically via File API
+                            const fontUrl = URL.createObjectURL(file);
+                            const familyName = `Custom_${style}_${Date.now()}`;
+                            const fontFace = new FontFace(familyName, `url(${fontUrl})`);
+                            
+                            try {
+                                const loadedFace = await fontFace.load();
+                                document.fonts.add(loadedFace);
+                                // Engine hook would map this to the specific tag here
+                                console.log(`Loaded ${familyName} for ${style}`);
+                            } catch(err) {
+                                console.error("Font load error:", err);
+                            }
+                        }
+                    });
                 });
             }
 
