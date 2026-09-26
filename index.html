@@ -303,7 +303,7 @@
         .input-suffix {
             display: flex; align-items: center; gap: 6px;
         }
-        .input-suffix input { width: 65px; }
+        .input-suffix input { width: 85px; padding-right: 4px; }
         .input-suffix span { font-size: 11px; color: var(--ui-text-muted); }
 
         .slider-group { padding: 8px 0; }
@@ -612,25 +612,25 @@
                     <h3 class="subsection-title">Paragraph Formatting</h3>
                     <div class="alignment-toolbar" id="text-align-toolbar">
                         <button class="align-btn" data-align="left" data-last="auto" title="Align Left">
-                            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M3 5h18v2H3V5zm0 5h14v2H3v-2zm0 5h18v2H3v-2zm0 5h10v2H3v-2z"/></svg>
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M2 4h20v3H2z M2 9h15v3H2z M2 14h20v3H2z M2 19h10v3H2z"/></svg>
                         </button>
                         <button class="align-btn" data-align="center" data-last="auto" title="Align Center">
-                            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M3 5h18v2H3V5zm2 5h14v2H5v-2zm-2 5h18v2H3v-2zm4 5h10v2H7v-2z"/></svg>
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M2 4h20v3H2z M4.5 9h15v3H4.5z M2 14h20v3H2z M7 19h10v3H7z"/></svg>
                         </button>
                         <button class="align-btn" data-align="right" data-last="auto" title="Align Right">
-                            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M3 5h18v2H3V5zm4 5h14v2H7v-2zm-4 5h18v2H3v-2zm8 5h10v2H11v-2z"/></svg>
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M2 4h20v3H2z M7 9h15v3H7z M2 14h20v3H2z M12 19h10v3H12z"/></svg>
                         </button>
                         <button class="align-btn active" data-align="justify" data-last="left" title="Justify Left Last">
-                            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M3 5h18v2H3V5zm0 5h18v2H3v-2zm0 5h18v2H3v-2zm0 5h10v2H3v-2z"/></svg>
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M2 4h20v3H2z M2 9h20v3H2z M2 14h20v3H2z M2 19h10v3H2z"/></svg>
                         </button>
                         <button class="align-btn" data-align="justify" data-last="center" title="Justify Center Last">
-                            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M3 5h18v2H3V5zm0 5h18v2H3v-2zm0 5h18v2H3v-2zm4 5h10v2H7v-2z"/></svg>
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M2 4h20v3H2z M2 9h20v3H2z M2 14h20v3H2z M7 19h10v3H7z"/></svg>
                         </button>
                         <button class="align-btn" data-align="justify" data-last="right" title="Justify Right Last">
-                            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M3 5h18v2H3V5zm0 5h18v2H3v-2zm0 5h18v2H3v-2zm8 5h10v2H11v-2z"/></svg>
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M2 4h20v3H2z M2 9h20v3H2z M2 14h20v3H2z M12 19h10v3H12z"/></svg>
                         </button>
                         <button class="align-btn" data-align="justify" data-last="justify" title="Justify All">
-                            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M3 5h18v2H3V5zm0 5h18v2H3v-2zm0 5h18v2H3v-2zm0 5h18v2H3v-2z"/></svg>
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M2 4h20v3H2z M2 9h20v3H2z M2 14h20v3H2z M2 19h20v3H2z"/></svg>
                         </button>
                     </div>
                     
@@ -1135,24 +1135,38 @@ Bei spezifischen Anliegen zu Mietkämpfen, Strategien und Eskalationsstufen ist 
                     }
                 });
 
-                // 2. Convert hex characters (e.g. \'e4 -> ä)
+                // 2. Remove any destination blocks {\*\...} (These contain hidden metadata like lists/borders)
+                let destIndex = text.indexOf('{\\*\\');
+                while (destIndex !== -1) {
+                    let braceCount = 1;
+                    let closeBrace = destIndex + 1;
+                    while (braceCount > 0 && closeBrace < text.length) {
+                        if (text[closeBrace] === '{') braceCount++;
+                        else if (text[closeBrace] === '}') braceCount--;
+                        closeBrace++;
+                    }
+                    text = text.substring(0, destIndex) + text.substring(closeBrace);
+                    destIndex = text.indexOf('{\\*\\'); // find next occurrence
+                }
+
+                // 3. Convert hex characters (e.g. \'e4 -> ä)
                 text = text.replace(/\\'([0-9a-fA-F]{2})/gi, (match, hex) => String.fromCharCode(parseInt(hex, 16)));
                 
-                // 3. Convert paragraph and line breaks
+                // 4. Convert paragraph and line breaks
                 text = text.replace(/\\(par|line)\b/gi, '\n');
                 text = text.replace(/\\tab\b/gi, '\t');
                 
-                // 4. Remove Unicode control chars like \uc1, \u1234
+                // 5. Remove Unicode control chars like \uc1, \u1234
                 text = text.replace(/\\uc\d+\s?/gi, '');
                 text = text.replace(/\\u(-?\d+)\s?/gi, (m, val) => String.fromCharCode(parseInt(val)));
 
-                // 5. Strip all remaining RTF control words
+                // 6. Strip all remaining RTF control words (e.g., \b, \i, \fs24)
                 text = text.replace(/\\[a-zA-Z]+(-?\d+)?\s?/g, '');
                 
-                // 6. Strip remaining braces
+                // 7. Strip remaining braces
                 text = text.replace(/[{}]/g, '');
                 
-                // 7. Collapse multiple linebreaks
+                // 8. Collapse multiple linebreaks
                 text = text.replace(/\n{3,}/g, '\n\n');
                 
                 return text.trim();
@@ -1235,20 +1249,22 @@ Bei spezifischen Anliegen zu Mietkämpfen, Strategien und Eskalationsstufen ist 
                         const h2 = document.createElement('h2');
                         h2.innerText = isRomanHeader ? p : p.replace(/\*/g, '');
                         this.rawTextBlocks.push(h2);
-                    } else if (p.startsWith('- ') || p.startsWith('• ') || p.startsWith('* ')) {
-                        // Detect and process bullet points
-                        h2.innerText = p.replace(/\*/g, '');
-                        this.rawTextBlocks.push(h2);
                     } 
                     // Advanced List Detection (matches lines starting with -, •, ◦, *, or numbers like 1.)
                     else if (p.match(/^[\s]*[-•◦*1-9]\.?\s+/m)) {
                         const ul = document.createElement('ul');
                         const listItems = p.split('\n');
                         listItems.forEach(item => {
-                            const cleanItem = item.replace(/^[\s]*[-•◦*1-9]\.?\s+/, '').trim();
-                            if (cleanItem) {
+                            // Extract the list text without the bullet marker
+                            const match = item.match(/^[\s]*([-•◦*]|[1-9]\.?)\s+(.*)/);
+                            if (match) {
                                 const li = document.createElement('li');
-                                li.innerText = cleanItem;
+                                li.innerText = match[2];
+                                ul.appendChild(li);
+                            } else if (item.trim()) {
+                                // If it's a multiline list item that didn't start with a bullet
+                                const li = document.createElement('li');
+                                li.innerText = item.trim();
                                 ul.appendChild(li);
                             }
                         });
