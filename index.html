@@ -1412,6 +1412,14 @@ Bei spezifischen Anliegen zu Mietkämpfen, Strategien und Eskalationsstufen ist 
             }
 
             // --- 4. Dynamic Procedural Flow Engine ---
+            queueReflow() {
+                // Debounce layout recalculations to prevent browser freezing
+                if (this.reflowTimeout) clearTimeout(this.reflowTimeout);
+                this.reflowTimeout = setTimeout(() => {
+                    this.flowTextToPages();
+                }, 50); 
+            }
+
             flowTextToPages() {
                 this.docContainer.innerHTML = '';
                 
