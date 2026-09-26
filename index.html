@@ -482,8 +482,8 @@
         #pip-editor {
             position: fixed;
             top: 0;
-            right: -400px; /* Hidden by default */
-            width: 400px;
+            right: -450px; /* Hidden by default */
+            width: 450px;
             height: 100vh;
             background: #1a1a1a;
             color: #d4d4d4;
@@ -491,15 +491,18 @@
             display: flex;
             flex-direction: column;
             box-shadow: -5px 0 30px rgba(0,0,0,0.3);
-            transition: right 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            transition: right 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease;
+        }
+        #pip-editor.open {
+            right: 0;
         }
         #pip-editor.active {
-            right: 0;
+            box-shadow: inset 0 0 0 3px rgb(0, 0, 255), -5px 0 30px rgba(0,0,0,0.3);
         }
         #pip-editor header {
             padding: 16px 20px;
             background: #2a2a2a;
-            border-bottom: 1px solid #444;
+            border-bottom: 1px solid #333;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -514,19 +517,49 @@
             font-size: 11px;
             color: #888;
         }
-        #pip-textarea {
-            flex: 1;
-            background: transparent;
+        
+        #pip-toolbar {
+            display: flex;
+            background: #2a2a2a;
+            padding: 8px 20px;
+            gap: 8px;
+            border-bottom: 1px solid #444;
+        }
+        .pip-btn {
+            background: #444;
+            color: #fff;
             border: none;
+            padding: 6px 12px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 11px;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+        .pip-btn:hover { background: var(--primary-blue); }
+
+        #pip-content {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
             color: #e6e6e6;
-            font-family: 'IBM Plex Sans', monospace;
+            font-family: 'IBM Plex Sans', sans-serif;
             font-size: 13px;
             line-height: 1.6;
-            padding: 20px;
-            resize: none;
             outline: none;
+            transition: opacity 0.3s ease;
         }
-        #pip-textarea:focus { outline: none; }
+        #pip-editor:not(.active) #pip-content {
+            opacity: 0.4;
+        }
+        
+        /* WYSIWYG Styling inside PIP */
+        #pip-content h1 { font-size: 20px; font-weight: 700; margin-bottom: 10px; color: #fff; }
+        #pip-content h2 { font-size: 16px; font-weight: 600; margin: 15px 0 8px; color: #fff; }
+        #pip-content h3 { font-size: 14px; font-weight: 600; margin: 12px 0 6px; color: #ccc; }
+        #pip-content p { margin-bottom: 10px; }
+        #pip-content ul { margin-left: 20px; margin-bottom: 10px; list-style-type: disc; }
 
     </style>
 </head>
@@ -638,8 +671,9 @@
                         <label for="page-numbers">Enable Page Numbering</label>
                     </div>
                     <div class="control-grid">
-                        <div class="control-group"><label>Start Page</label><input type="number" id="page-start" value="1"></div>
-                        <div class="control-group"><label>End Page</label><input type="number" id="page-end" value="999"></div>
+                        <div class="control-group"><label>Show from Page</label><input type="number" id="page-show-start" value="1"></div>
+                        <div class="control-group"><label>Show until Page</label><input type="number" id="page-show-end" value="999"></div>
+                        <div class="control-group" style="grid-column: 1 / -1;"><label>Start counting at #</label><input type="number" id="page-count-start" value="1"></div>
                     </div>
                 </div>
 
@@ -799,10 +833,17 @@
     <!-- PIP Text Editor -->
     <aside id="pip-editor">
         <header>
-            <h2>Plain Text Editor</h2>
-            <span>Press Esc to close</span>
+            <h2>Text & Style Editor</h2>
+            <span>Click outside to close</span>
         </header>
-        <textarea id="pip-textarea" spellcheck="false" placeholder="Your body text will appear here..."></textarea>
+        <div id="pip-toolbar">
+            <button class="pip-btn" data-tag="H1">H1</button>
+            <button class="pip-btn" data-tag="H2">H2</button>
+            <button class="pip-btn" data-tag="H3">H3</button>
+            <button class="pip-btn" data-tag="P">Body</button>
+            <button class="pip-btn" data-tag="UL">List</button>
+        </div>
+        <div id="pip-content" contenteditable="true" spellcheck="false"></div>
     </aside>
 
     <script>
@@ -821,114 +862,26 @@
                 this.startY = 0;
 
                 // Document Data
-                this.rawTextBlocks = [];
                 this.tocTextBlocks = [];
                 this.bodyTextBlocks = [];
-                this.rawBodyText = `**Inhalte und Ideen für deine Mietkampfgruppe**
-Ein Leitfaden der Mietgewerkschaft Leipzig für gemeinsame Kämpfe im Stadtteil
-
-**Inhaltsverzeichnis**
-- Einleitung
-- I. Warum Mietkampfgruppen?
-- II. Das ist eine Mietkampfgruppe und das will sie erreichen
-- III. So arbeitet die Mietkampfgruppe
-- Gründung & Organisation
-- IV. So startest du eine Mietkampfgruppe
-- V. Tipps und Hinweise für eure gemeinsame Arbeit
-- Aktiv werden
-- VI. Eskalationsstufen für den Mietkampf
-- VII. Mögliche Aktionsformen
-- Hilfe & Kontakt
-- VIII. Kontakt bei Fragen
-
-I. Warum Mietkampfgruppen?
-Wir als Mietgewerkschaft wollen zusammen als Nachbarschaft im Stadtteil Strukturen entwickeln, mit denen wir in der Lage sind, gemeinsam gegen die alltäglichen Zumutungen der kapitalistischen Gesellschaft zu kämpfen. Wir verfolgen also nicht (nur) das Ziel, Einzelnen mit individuellen Problemen zu helfen. Stattdessen bieten wir Strukturen an, um sich an Mietkämpfen und Ähnlichem zu beteiligen.
-
-Die Mietgewerkschaft Leipzig ist also vor allem darauf ausgelegt, Mietkämpfe und Anliegen von Mieter*innen zusammenzulegen und dann gemeinsam gegen die Ungerechtigkeiten vorzugehen. Wir wollen somit eine Plattform sein, über die sich Menschen kennenlernen und über die sie möglicherweise auch kommunizieren und sich im Kampf gegen Vermieter und Immobilienkonzerne verbünden können. Dafür schlagen wir als zentrales Organ der Mietgewerkschaft die Mietkampfgruppen vor. Was genau die Mietkampfgruppen sind und wie sie funktionieren, erfahrt ihr in dieser Broschüre.
-
-II. Das ist eine Mietkampfgruppe und das will sie erreichen
-In den Mietkampfgruppen finden sich Menschen zusammen, die sich entlang eines Mietstreits mit einer Hausverwaltung oder Eigentümer verbünden und gemeinsam dagegen vorgehen möchten. Das können also direkte Nachbar*innen sein, aber auch andere Menschen im Viertel, die die gleiche Hausverwaltung und/oder Eigentümer haben.
-
-Wenn du und deine direkten Nachbar*innen in deinem Haus also Probleme mit eurer Hausverwaltung und/oder eurer Eigentümer habt, könnt ihr euch als Hausgemeinschaft oder gemeinsam mit anderen Menschen, die die gleiche Hausverwaltung und/oder Eigentümer haben, in einer Mietkampfgruppe organisieren. So könnt ihr euch im Kampf gegen die Ungerechtigkeiten gegenseitig unterstützen und zusammen Strategien entwickeln. Wenn ihr dann Druck auf die Hausverwaltung und/oder Eigentümer aufbaut, hat das natürlich viel mehr Schlagkraft, als wenn ihr alleine dagegen ankämpft. Kurzgesagt: In den Mietkampfgruppen werden Anliegen und Mietkämpfe von Mieter*innen zusammengelegt und die Mietkämpfe durchgeführt.
-
-Wichtig ist, dass die Mietkampfgruppen dabei auf Langfristigkeit ausgelegt sind und über ein bestimmtes Problem (wie zum Beispiel zu hohe Nebenkostenabrechnungen) hinaus existieren sollen. Es geht also nicht nur darum, sich im Kampf gegen Vermieter*innen zusammenzutun, sondern auch darum, die Nachbarschaftsgemeinschaft zu stärken. Die Mietkampfgruppen können also auch dazu da sein, sich gegenseitig als Nachbar*innen besser kennenzulernen und gemeinsam schöne Zeit zusammen zu verbringen! So kann im besten Fall das Gemeinschaftsgefühl gestärkt werden und ihr als Nachbar*innen könnt euch bei Bedarf über Mietangelegenheiten hinaus unterstützen.
-
-III. So arbeitet die Mietkampfgruppe
-Die Mietkampfgruppe arbeitet grundlegend eigenständig. Sie kann sich zum Beispiel selbst aussuchen, wie oft sie sich trifft und wie ihre Treffen ablaufen. Sie ist allerdings dazu angehalten, sich im Sinne der Arbeitsweise und Grundsätze sowie den Prinzipien des Miteinanders der Mietgewerkschaft zu organisieren (basisdemokratische Organisierung, Langfristigkeit, realistische Einschätzung unserer Zeit, Flexibilität, Konfliktkultur, Offenheit, Feedbackkultur, Gemeinsame Ziele, mehr dazu in der Broschüre "Willkommen in der Mietgewerkschaft").
-
-Die Mietkampfgruppe arbeitet nach dem Eskalationsstufenmodell. Was genau das heißt und was mögliche Aktionsformen für den Mietkampf sind, findet ihr in dieser Broschüre im entsprechenden Kapitel.
-
-**Finanzen und rechtliche Rahmenbedingungen**
-Wenn eine Mietkampfgruppe strafrechtlich relevante Aktionen plant, ist das mit der Vollversammlung abzusprechen. Die Mietkampfgruppen können Geld von der Mietgewerkschaft bekommen, wenn dies für bestimmte Aktionen wie zum Beispiel das Drucken von Flyern benötigt wird. Sollte das Geld zur Verfügung stehen, werden 50 € pro Aktion (gedeckelt auf 250 € pro Mietkampfgruppe im Jahr) vom Buchführungs- und Kassenmandat bewilligt, wenn die Aktion im Einklang mit dem Konzept der Mietgewerkschaft steht. Für Anträge über mehr Geld oder wenn das Mandat unsicher ist, ob die Aktion im Einklang mit dem Konzept steht, wird das Anliegen auf der Vollversammlung besprochen und im Wege des Mehrheitsentscheids entschieden.
-
-**Unterstützung und Mietkampfversammlung**
-Zu Beginn können auch Leute, die in der Mietgewerkschaft aktiv sind, aber keine direkten Nachbar*innen sind, Teil einer Mietkampfgruppe werden, um sie beim Aufbau zu unterstützen. Die Mietkampfgruppe kann sich mit Fragen immer an die Gewerkschaft wenden. Es gibt außerdem ein Mietkampfmandat, also eine Person, die den Überblick über die laufenden Mietkämpfe und die Mietkampfversammlungen hat und die erste Ansprechperson für die Mietkampfgruppen ist.
-
-Strategiefragen, Schwierigkeiten und Herausforderungen in der Mietkampfgruppe können bei der monatlichen Mietkampfversammlung besprochen werden. Alle Mietkampfgruppen sind verpflichtet, eine Person zu diesen Versammlungen zu schicken, die über den Gang des Mietkampfes berichtet. Die Versammlungen dauern maximal 1,5 Stunden, werden moderiert und protokolliert. Im Anschluss gibt es Raum für informellen Austausch bei Snacks und Getränken.
-
-**Unabhängigkeit und Werte**
-Als Mietgewerkschaft setzen wir auf unabhängige, außerparlamentarische Strukturen. Wir spielen nicht nach den Regeln politischer Parteien, um unbeeinflussbar und unkäuflich zu bleiben. Parteien sehen wir nicht als zuverlässige Verbündete an, da sie durch Sachzwänge nicht unabhängig handeln können. Wir arbeiten zudem nicht mit Gruppen zusammen, die grundlegend unseren emanzipatorischen Werten widersprechen. Diese Grundsätze gelten uneingeschränkt auch für alle Mietkampfgruppen.
-
-IV. So startest du eine Mietkampfgruppe
-1. Ersten Kontakt knüpfen: Nimm zuerst Kontakt zu deinen Nachbar*innen auf. Du kannst bei ihnen klingeln und sie fragen, wie es ihnen mit der Hausverwaltung und/oder den Eigentümern geht. Erstelle z. B. eine WhatsApp-Gruppe für den einfacheren Austausch. Ein QR-Code mit dem Einladungslink im Treppenhaus hilft, alle zu erreichen.
-2. Erstes Treffen organisieren: Lade zu einem unverbindlichen Kennenlernen ein – das muss kein strukturiertes Treffen sein. Ein gemeinsames Grillen im Hof oder Waffelessen im Wohnzimmer bietet einen guten Rahmen, um über die Wohnsituation und die Idee der Mietgewerkschaft zu sprechen.
-3. Offizielle Gründung: Wenn ihr euch entscheidet, eine Mietkampfgruppe zu werden, schließt jeweils als Einzelpersonen eine Mitgliedschaft bei der Mietgewerkschaft ab und besucht die nächste Mietkampfversammlung. Dort stellt ihr euch und euer Anliegen vor. Damit seid ihr offiziell gegründet und Teil der Mietgewerkschaft. Neumitglieder sind zudem herzlich zur alle drei Monate stattfindenden Einführungsveranstaltung eingeladen.
-
-V. Tipps und Hinweise für eure gemeinsame Arbeit
-**Vor dem Treffen**
-- Termin & Ort: Nutzt Termin-Abstimmungs-Tools in eurer Chatgruppe. Wählt zugängliche Orte wie Wohnzimmer, Gemeinschaftsräume oder den Hinterhof.
-- Rollenverteilung: Legt vorab fest, wer das Treffen vorbereitet, wer moderiert und wer protokolliert.
-- Tagesordnung: Verschriftlicht eine Tagesordnung mit allen Sammelpunkten und plant bewusst Pausen ein.
-
-**Während des Treffens**
-1. Ankommen & Vorstellen: Kurze Runde zum Kennenlernen oder Abfragen des aktuellen Befindens.
-2. Problemerfassung: Konkrete Themen sammeln, die euch als Nachbar*innen beschäftigen.
-3. Strategieentwicklung: Gemeinsam passende Aktionsformen und Schritte diskutieren.
-4. Aufgaben verteilen: Erstklassige Klarheit schaffen, wer welche Aufgaben bis zum nächsten Mal übernimmt.
-5. Nächster Termin: Direkt den nächsten Termin sowie Moderation/Protokoll festlegen.
-
-Tipp: Haltet Treffen zugänglich und angenehm durch Kinderbetreuung, Snacks oder ein getränk im Anschluss!
-
-**Grundsatz: Worauf zu achten ist**
-- Ausgewogenheit: Achtet gemeinsam darauf, dass alle zu Wort kommen; ermutigt leise Personen.
-- Fokussierung: Verliert euch nicht in Diskussionen über Detailfragen einzelner Personen.
-- Kollektivität: Stellt sicher, dass Entscheidungen von der ganzen Gruppe getragen werden.
-
-VI. Eskalationsstufen für den Mietkampf
-Wir arbeiten nach einem Eskalationsstufenmodell. Das bedeutet, dass wir an Hausverwaltungen und Eigentümer Forderungen stellen und mit unterschiedlichen Aktionsformen steigend mehr Druck aufbauen.
-
-Wichtig: Vor Beginn müsst ihr klare, eindeutige Forderungen formulieren. Diese bilden die Basis und sollten während des Kampfes möglichst nicht stark verändert werden.
-
-- Stufe 1 (Vorbereitung): Konkrete Forderungen formulieren, schriftlich festhalten und in der Gruppe beschließen.
-- Stufe 2 (1. Woche): Höfliches Schreiben mit Fristsetzung im Namen der Mietkampfgruppe an die Vermietung senden.
-- Stufe 3 (3. Woche): Zweites Anschreiben mit juristischer Sprache & Androhung von Öffentlichkeitsarbeit (oder Übergabe als Delegation).
-- Stufe 4 (ab 5. Woche): Öffentliche Aktionen starten (Flyer, Postkarten, Telefonkampagne, Kundgebung, Banner).
-- Stufe 5 (Nach Bedarf): Direktere Aktionsformen (Absprache mit dem Mietkampfmandat erforderlich).
-- Stufe 6 (Nach Bedarf): Formelle Androhung einer Mietkürzung oder eines Mietstreiks.
-- Stufe 7 (Nach Bedarf): Durchführung einer Mietkürzung oder eines Mietstreiks.
-
-VII. Mögliche Aktionsformen
-**1. Schreiben mit Androhung von Öffentlichkeitsarbeit**
-Ein Brief an die Vermietung, der Forderungen erneut auflistet und ankündigt, diese öffentlichkeitswirksam durchzusetzen.
-- Sinnvoll wenn: Ihr am Anfang steht, Stärke zeigen und der Vermietung signalisieren wollt, dass eine Organisation hinter euch steht.
-- Orga: 1–2 Personen setzen das Schreiben auf. Nach Zustimmung der Gruppe per Post senden oder als Delegation übergeben.
-
-**2. Telefonkampagnen**
-- Sinnvoll für: Schnelle Ergebnisse und die Demonstration breiter Unterstützung (1–2 Orga-Personen, 10–25 Anrufende).
-- Durchführung: Erstellt ein Skript (2–4 Sätze, z. B. "Ich fordere, dass Sie mit den Mieter*innen verhandeln..."). Verbreitet die Telefonnummer und das Zeitfenster (morgens/mittags, 2–3 Std.) per SharePic oder Flyer. Bei Verweigerung können SMS gesendet werden.
-
-**3. Delegation**
-Eine Gruppe überbringt persönlich eine Botschaft im Büro oder an der Haustür der Vermietung (optimal: 7–12 Personen).
-- Vorbereitung: Betroffene Mieter*innen sollten das Schreiben überreichen. Spielt mögliche Szenarien vorher durch (Wut, Verweis vom Grundstück, Spaltungsversuche). Tretet geschlossen und selbstbewusst auf. Bringt Schilder, Transparente und Flyer mit.
-
-VIII. Kontakt bei Fragen
-Bei allen allgemeinen und internen Fragen wendet euch an die zentrale Kontaktstelle:
-- E-Mail Kontaktstelle: kontaktstelle_mietgew_le@systemli.org
-
-Bei spezifischen Anliegen zu Mietkämpfen, Strategien und Eskalationsstufen ist das Mietkampfmandat eure erste Ansprechperson.`;
+                
+                // Pre-formatted HTML Seed
+                this.rawBodyHTML = `
+<h1>Inhalte und Ideen für deine Mietkampfgruppe</h1>
+<p>Ein Leitfaden der Mietgewerkschaft Leipzig für gemeinsame Kämpfe im Stadtteil</p>
+<h2>Inhaltsverzeichnis</h2>
+<ul>
+<li>Einleitung</li>
+<li>I. Warum Mietkampfgruppen?</li>
+<li>II. Das ist eine Mietkampfgruppe und das will sie erreichen</li>
+</ul>
+<h2>I. Warum Mietkampfgruppen?</h2>
+<p>Wir als Mietgewerkschaft wollen zusammen als Nachbarschaft im Stadtteil Strukturen entwickeln, mit denen wir in der Lage sind, gemeinsam gegen die alltäglichen Zumutungen der kapitalistischen Gesellschaft zu kämpfen. Wir verfolgen also nicht (nur) das Ziel, Einzelnen mit individuellen Problemen zu helfen. Stattdessen bieten wir Strukturen an, um sich an Mietkämpfen und Ähnlichem zu beteiligen.</p>
+<p>Die Mietgewerkschaft Leipzig ist also vor allem darauf ausgelegt, Mietkämpfe und Anliegen von Mieter*innen zusammenzulegen und dann gemeinsam gegen die Ungerechtigkeiten vorzugehen. Wir wollen somit eine Plattform sein, über die sich Menschen kennenlernen und über die sie möglicherweise auch kommunizieren und sich im Kampf gegen Vermieter und Immobilienkonzerne verbünden können. Dafür schlagen wir als zentrales Organ der Mietgewerkschaft die Mietkampfgruppen vor. Was genau die Mietkampfgruppen sind und wie sie funktionieren, erfahrt ihr in dieser Broschüre.</p>
+                `;
 
                 this.pipPanel = document.getElementById('pip-editor');
-                this.pipTextarea = document.getElementById('pip-textarea');
+                this.pipContent = document.getElementById('pip-content');
                 
                 this.initWorkspace();
                 this.initUIListeners();
@@ -937,7 +890,8 @@ Bei spezifischen Anliegen zu Mietkämpfen, Strategien und Eskalationsstufen ist 
                 this.initPIPEditor();
                 
                 // Initial Render
-                this.processText(this.rawBodyText, 'body');
+                this.pipContent.innerHTML = this.rawBodyHTML;
+                this.updateFromPIP();
             }
 
             // --- 1. Workspace (Canvas) Interactions ---
@@ -986,35 +940,92 @@ Bei spezifischen Anliegen zu Mietkämpfen, Strategien und Eskalationsstufen ist 
 
             // --- 1.5 PIP Text Editor ---
             initPIPEditor() {
-                // Key listener for 't' and 'Escape'
+                // Set default paragraph separator to <p> to maintain clean DOM
+                document.execCommand('defaultParagraphSeparator', false, 'p');
+
+                // Toolbar Styling Assignments
+                document.querySelectorAll('.pip-btn').forEach(btn => {
+                    btn.addEventListener('mousedown', e => e.preventDefault()); // Prevent losing text selection focus
+                    btn.addEventListener('click', (e) => {
+                        const tag = btn.dataset.tag;
+                        if (tag === 'UL') {
+                            document.execCommand('insertUnorderedList', false, null);
+                        } else {
+                            document.execCommand('formatBlock', false, tag);
+                        }
+                        this.updateFromPIP();
+                    });
+                });
+
+                // Open PIP via "T" (inactive state initially)
                 window.addEventListener('keydown', (e) => {
                     const activeTag = document.activeElement.tagName;
-                    const isInput = activeTag === 'INPUT' || activeTag === 'SELECT' || activeTag === 'TEXTAREA';
+                    const isInput = activeTag === 'INPUT' || activeTag === 'SELECT' || document.activeElement.isContentEditable;
                     
                     if (e.key.toLowerCase() === 't' && !isInput) {
                         e.preventDefault();
-                        this.pipPanel.classList.toggle('active');
-                        if (this.pipPanel.classList.contains('active')) {
-                            this.pipTextarea.value = this.rawBodyText;
-                            this.pipTextarea.focus();
-                        }
+                        this.pipPanel.classList.add('open');
                     }
+                });
 
-                    if (e.key === 'Escape' && this.pipPanel.classList.contains('active')) {
+                // Activate PIP on click inside
+                this.pipPanel.addEventListener('mousedown', (e) => {
+                    if (!this.pipPanel.classList.contains('active')) {
+                        this.pipPanel.classList.add('active');
+                    }
+                });
+
+                // Deactivate & Close PIP on click outside
+                document.addEventListener('mousedown', (e) => {
+                    if (this.pipPanel.classList.contains('open') && !this.pipPanel.contains(e.target)) {
+                        this.pipPanel.classList.remove('open');
+                        this.pipPanel.classList.remove('active');
+                    }
+                });
+
+                // Close PIP on Esc
+                window.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape' && this.pipPanel.classList.contains('open')) {
+                        this.pipPanel.classList.remove('open');
                         this.pipPanel.classList.remove('active');
                         this.workspace.focus();
                     }
                 });
 
-                // Debounce function for live rendering
+                // Debounce function for live rendering while typing
                 let timeout = null;
-                this.pipTextarea.addEventListener('input', (e) => {
-                    this.rawBodyText = e.target.value;
+                this.pipContent.addEventListener('input', (e) => {
                     clearTimeout(timeout);
                     timeout = setTimeout(() => {
-                        this.processText(this.rawBodyText, 'body');
+                        this.updateFromPIP();
                     }, 400); // 400ms debounce
                 });
+            }
+
+            updateFromPIP() {
+                const html = this.pipContent.innerHTML;
+                this.parseHTMLToBlocks(html, 'body');
+            }
+
+            parseHTMLToBlocks(html, type) {
+                const temp = document.createElement('div');
+                temp.innerHTML = html;
+                
+                let blocks = [];
+                temp.childNodes.forEach(node => {
+                    if (node.nodeType === 1) { // Element node (P, H1, H2, UL, etc.)
+                        blocks.push(node.cloneNode(true));
+                    } else if (node.nodeType === 3 && node.textContent.trim()) { // Stray text node fallback
+                        const p = document.createElement('p');
+                        p.textContent = node.textContent;
+                        blocks.push(p);
+                    }
+                });
+
+                if (type === 'toc') this.tocTextBlocks = blocks;
+                if (type === 'body') this.bodyTextBlocks = blocks;
+                
+                this.queueReflow();
             }
 
             // --- 2. Gestalt UI Listeners ---
@@ -1198,8 +1209,9 @@ Bei spezifischen Anliegen zu Mietkämpfen, Strategien und Eskalationsstufen ist 
                 });
 
                 // Trigger pagination reflow (TOC and Body Start pages)
-                ['page-numbers', 'page-start', 'page-end', 'toc-start-page', 'body-start-page'].forEach(id => {
-                    document.getElementById(id).addEventListener('input', () => this.queueReflow());
+                ['page-numbers', 'page-show-start', 'page-show-end', 'page-count-start', 'toc-start-page', 'body-start-page'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if(el) el.addEventListener('input', () => this.queueReflow());
                 });
 
                 document.getElementById('btn-export').addEventListener('click', () => {
@@ -1225,11 +1237,15 @@ Bei spezifischen Anliegen zu Mietkämpfen, Strategien und Eskalationsstufen ist 
                             
                             zone.innerHTML = `<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>Loaded: ${file.name}`;
                             
-                            if(type === 'body') {
-                                this.rawBodyText = text;
-                                if(this.pipPanel.classList.contains('active')) this.pipTextarea.value = text;
+                            // Convert plain text to simple HTML paragraphs for the editor
+                            let html = text.split(/\n\n+/).map(p => `<p>${p.trim()}</p>`).join('');
+                            
+                            if (type === 'body') {
+                                this.pipContent.innerHTML = html;
+                                this.updateFromPIP();
+                            } else {
+                                this.parseHTMLToBlocks(html, 'toc');
                             }
-                            this.processText(text, type);
                         }
                     });
                 };
@@ -1425,8 +1441,9 @@ Bei spezifischen Anliegen zu Mietkämpfen, Strategien und Eskalationsstufen ist 
                 
                 const dropcapLines = parseInt(document.getElementById('p-drop-lines').value) || 0;
                 const numCheckbox = document.getElementById('page-numbers').checked;
-                const startPageNum = parseInt(document.getElementById('page-start').value) || 1;
-                const endPageNum = parseInt(document.getElementById('page-end').value) || 999;
+                const showStart = parseInt(document.getElementById('page-show-start').value) || 1;
+                const showEnd = parseInt(document.getElementById('page-show-end').value) || 999;
+                const countStart = parseInt(document.getElementById('page-count-start').value) || 1;
 
                 const getOrCreatePage = (idx) => {
                     // Create pages up to the requested index if they don't exist
@@ -1450,11 +1467,13 @@ Bei spezifischen Anliegen zu Mietkämpfen, Strategien und Eskalationsstufen ist 
                         }
                         page.appendChild(overlay);
 
-                        // Page Numbering
-                        if (numCheckbox && currentIdx >= startPageNum && currentIdx <= endPageNum) {
+                        // Page Numbering Calculation
+                        if (numCheckbox && currentIdx >= showStart && currentIdx <= showEnd) {
                             const pageNumNode = document.createElement('div');
                             pageNumNode.className = 'page-number';
-                            pageNumNode.innerText = currentIdx;
+                            // Math: If showStart is 3, and countStart is 1, page 3 gets "1", page 4 gets "2"
+                            const displayNumber = countStart + (currentIdx - showStart);
+                            pageNumNode.innerText = displayNumber;
                             page.appendChild(pageNumNode);
                         }
 
