@@ -415,6 +415,7 @@
             
             text-align: var(--text-align, justify);
             text-align-last: var(--text-align-last, left);
+            word-spacing: var(--word-spacing, 0em);
         }
         
         .page p.dropcap::first-letter {
@@ -764,6 +765,27 @@
                                 <option value="-">Hyphen ( - )</option>
                             </select>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Justification Card -->
+                <div class="gestalt-card">
+                    <h3 class="subsection-title">Justification</h3>
+                    <div class="control-group checkbox-row" style="margin-bottom: 8px;">
+                        <input type="checkbox" id="justification-enable" checked>
+                        <label for="justification-enable">Enable Justification Spacing</label>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 85px 1fr 1fr 1fr; gap: 8px; align-items: center; margin-bottom: 4px;">
+                        <div></div>
+                        <label style="text-align: left; padding-bottom: 2px;">Minimum</label>
+                        <label style="text-align: left; padding-bottom: 2px;">Desired</label>
+                        <label style="text-align: left; padding-bottom: 2px;">Maximum</label>
+                        
+                        <label style="text-align: right; padding-right: 4px; font-weight: 600;">Word Spacing:</label>
+                        <div class="input-suffix" id="ws-min-wrap"><input type="number" id="word-space-min" value="80"><span>%</span></div>
+                        <div class="input-suffix" id="ws-des-wrap"><input type="number" id="word-space-des" value="100"><span>%</span></div>
+                        <div class="input-suffix" id="ws-max-wrap"><input type="number" id="word-space-max" value="133"><span>%</span></div>
                     </div>
                 </div>
 
@@ -1207,6 +1229,35 @@
                 ['hyph-enable', 'hyph-words', 'hyph-before', 'hyph-after', 'hyph-limit', 'hyph-zone'].forEach(id => {
                     document.getElementById(id).addEventListener('input', applyHJEngine);
                 });
+
+                // Justification Engine Hooking
+                const applyJustification = () => {
+                    const enabled = document.getElementById('justification-enable').checked;
+                    const inputs = ['word-space-min', 'word-space-des', 'word-space-max'];
+                    const wrappers = ['ws-min-wrap', 'ws-des-wrap', 'ws-max-wrap'];
+                    
+                    inputs.forEach((id, index) => {
+                        const el = document.getElementById(id);
+                        el.disabled = !enabled;
+                        document.getElementById(wrappers[index]).style.opacity = enabled ? '1' : '0.4';
+                    });
+
+                    if (enabled) {
+                        const des = parseFloat(document.getElementById('word-space-des').value) || 100;
+                        const emValue = (des - 100) / 100;
+                        document.documentElement.style.setProperty('--word-spacing', `${emValue}em`);
+                    } else {
+                        document.documentElement.style.setProperty('--word-spacing', `0em`);
+                    }
+                };
+
+                ['justification-enable', 'word-space-min', 'word-space-des', 'word-space-max'].forEach(id => {
+                    document.getElementById(id).addEventListener('input', () => {
+                        applyJustification();
+                        this.queueReflow();
+                    });
+                });
+                applyJustification(); // Initialize default state
 
                 // Trigger pagination reflow (TOC and Body Start pages)
                 ['page-numbers', 'page-show-start', 'page-show-end', 'page-count-start', 'toc-start-page', 'body-start-page'].forEach(id => {
