@@ -618,7 +618,7 @@
                     <h3 class="subsection-title">Body Text</h3>
                     <div class="drop-zone" id="text-drop" style="padding: 16px;">
                         <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
-                        Drop .txt, .md, .rtf Here
+                        Drop your text here!
                     </div>
                     <div class="control-row" style="margin-top: 8px;">
                         <div class="control-group" style="flex:1;">
@@ -887,6 +887,9 @@
             <button class="pip-btn" data-tag="H3">H3</button>
             <button class="pip-btn" data-tag="P">Body</button>
             <button class="pip-btn" data-tag="UL">List</button>
+            <div style="width: 1px; background: #555; margin: 0 4px;"></div>
+            <button class="pip-btn" id="btn-page-break" title="Force text to next page">Page Break</button>
+            <button class="pip-btn" id="btn-save-text" title="Download text as .html to save formatting" style="margin-left: auto; background-color: var(--primary-blue);">↓ Save</button>
         </div>
         <div id="pip-content" contenteditable="true" spellcheck="false"></div>
     </aside>
@@ -934,8 +937,14 @@
                 this.initCustomStyles();
                 this.initPIPEditor();
                 
-                // Initial Render
-                this.pipContent.innerHTML = this.rawBodyHTML;
+                // Initial Render - Check for Auto-saved content
+                const cachedText = localStorage.getItem('typesetting-pip-cache');
+                if (cachedText) {
+                    this.pipContent.innerHTML = cachedText;
+                } else {
+                    this.pipContent.innerHTML = this.rawBodyHTML;
+                }
+                
                 this.updateFromPIP();
             }
 
@@ -1002,6 +1011,23 @@
                     });
                 });
 
+                // Page Break button logic
+                document.getElementById('btn-page-break').addEventListener('click', (e) => {
+                    document.execCommand('insertHorizontalRule', false, null);
+                    this.updateFromPIP();
+                });
+
+                // Download HTML backup logic
+                document.getElementById('btn-save-text').addEventListener('click', (e) => {
+                    const blob = new Blob([this.pipContent.innerHTML], { type: 'text/html' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'typesetting-backup.html';
+                    a.click();
+                    URL.revokeObjectURL(url);
+                });
+
                 // Open PIP via "T" (inactive state initially)
                 window.addEventListener('keydown', (e) => {
                     const activeTag = document.activeElement.tagName;
@@ -1049,6 +1075,10 @@
 
             updateFromPIP() {
                 const html = this.pipContent.innerHTML;
+                
+                // Auto-save locally
+                localStorage.setItem('typesetting-pip-cache', html);
+                
                 this.parseHTMLToBlocks(html, 'body');
             }
 
@@ -1350,14 +1380,20 @@
                         zone.classList.remove('dragover');
                         const file = e.dataTransfer.files[0];
                         
-                        if (file && file.name.match(/\.(txt|md|rtf|doc)$/i)) {
+                        if (file && file.name.match(/\.(txt|md|rtf|doc|html)$/i)) {
                             let text = await file.text();
-                            if (text.startsWith('{\\rtf')) text = this.cleanRTF(text);
                             
                             zone.innerHTML = `<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>Loaded: ${file.name}`;
                             
-                            // Convert plain text to simple HTML paragraphs for the editor
-                            let html = text.split(/\n\n+/).map(p => `<p>${p.trim()}</p>`).join('');
+                            let html = "";
+                            if (file.name.endsWith('.html')) {
+                                // If it's our exported HTML backup, load it directly
+                                html = text;
+                            } else {
+                                // Convert plain text/rtf to simple HTML paragraphs
+                                if (text.startsWith('{\\rtf')) text = this.cleanRTF(text);
+                                html = text.split(/\n\n+/).map(p => `<p>${p.trim()}</p>`).join('');
+                            }
                             
                             if (type === 'body') {
                                 this.pipContent.innerHTML = html;
@@ -1656,6 +1692,13 @@
                     for (let i = 0; i < blocks.length; i++) {
                         const clone = blocks[i].cloneNode(true);
                         
+                        // Frame Break / Page Break handling
+                        if (clone.tagName === 'HR') {
+                            pageIndex++;
+                            currentContentNode = getOrCreatePage(pageIndex);
+                            continue; // Skip appending the <hr> visual element itself
+                        }
+
                         // Apply dropcap to the very first paragraph of the body
                         if (isBody && dropcapLines > 0 && i === 0 && clone.tagName === 'P') {
                             clone.classList.add('dropcap');
