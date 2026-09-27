@@ -596,21 +596,22 @@
         }
         #unfold-tooltip.visible {
             opacity: 1;
+            transform: translateY(0);
         }
 
         /* Flawless Native Print Export */
         @media print {
-            body { background: white; margin: 0; padding: 0; }
+            body, html { height: auto !important; overflow: visible !important; background: white !important; margin: 0; padding: 0; }
             #ui-panel, #pip-editor, #unfold-btn, #unfold-tooltip { display: none !important; }
-            #workspace { background: none; }
-            #canvas { position: static; transform: none !important; }
-            #document-container { padding: 0; width: 100% !important; display: block; }
+            #workspace { background: none !important; overflow: visible !important; position: static !important; display: block !important; }
+            #canvas { position: static !important; transform: none !important; display: block !important; }
+            #document-container { padding: 0 !important; width: 100% !important; display: block !important; }
             .page { 
                 margin: 0 !important; 
                 box-shadow: none !important; 
                 border: none !important; 
-                page-break-after: always; 
-                break-after: page; 
+                page-break-after: always !important; 
+                break-after: page !important; 
             }
             .grid-overlay { display: none !important; }
             .show-baseline .page-content { background-image: none !important; }
@@ -1124,24 +1125,20 @@ bei Fragen&nbsp;</h1><p>Bei allen allgemeinen und internen Fragen wendet euch an
                         this.scale += (e.deltaY < 0 ? 1 : -1) * zoomFactor;
                         this.scale = Math.max(0.1, Math.min(this.scale, 5));
                         
-                        // Zoom to pointer logic
+                        // Precise Zoom-to-Pointer Math
                         const rect = this.workspace.getBoundingClientRect();
                         const mouseX = e.clientX - rect.left;
                         const mouseY = e.clientY - rect.top;
                         
-                        // Calculate canvas visual center relative to workspace
                         const cx = rect.width / 2;
                         const cy = rect.height / 2;
                         
-                        // Distance from mouse to canvas center
                         const offsetX = mouseX - (cx + this.translateX);
                         const offsetY = mouseY - (cy + this.translateY);
                         
-                        // Offset transformation delta to keep point under cursor
                         const ratio = this.scale / oldScale;
                         this.translateX -= offsetX * (ratio - 1);
                         this.translateY -= offsetY * (ratio - 1);
-                        
                     } else {
                         this.translateX -= e.deltaX;
                         this.translateY -= e.deltaY;
@@ -1150,6 +1147,7 @@ bei Fragen&nbsp;</h1><p>Bei allen allgemeinen und internen Fragen wendet euch an
                 }, { passive: false });
             }
 
+            updateCanvasTransform() {
             updateCanvasTransform() {
                 this.canvas.style.transform = `translate(calc(-50% + ${this.translateX}px), calc(-50% + ${this.translateY}px)) scale(${this.scale})`;
             }
@@ -1536,7 +1534,7 @@ bei Fragen&nbsp;</h1><p>Bei allen allgemeinen und internen Fragen wendet euch an
                     styleEl.id = 'print-style';
                     document.head.appendChild(styleEl);
                 }
-                // Inject actual physical dimensions into the print dialog
+                // Inject actual physical dimensions into the print dialog to strip margins/headers natively
                 styleEl.innerHTML = `@media print { @page { size: ${width} ${height}; margin: 0; } }`;
             }
 
