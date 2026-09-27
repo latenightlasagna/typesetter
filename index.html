@@ -585,52 +585,58 @@
                 
                 <div class="gestalt-card">
                     <h3 class="subsection-title">Table of Contents</h3>
-                    <div class="drop-zone" id="toc-drop">
-                        <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
-                        Drop TOC File (.txt, .rtf, .doc)
-                    </div>
-                    <div class="control-row" style="margin-top: 8px;">
-                        <div class="control-group"><label>Start on Page</label><input type="number" id="toc-start-page" value="3"></div>
+                    <button id="btn-toggle-toc" class="primary-btn" style="margin-top: 0; margin-bottom: 4px; padding: 10px; font-size: 12px;">Generate TOC</button>
+                    
+                    <div id="toc-settings" style="display: none; flex-direction: column; gap: 12px; margin-top: 8px;">
+                        <div class="control-group">
+                            <label>List Type</label>
+                            <select id="toc-list-type">
+                                <option value="bullet">Bullet List</option>
+                                <option value="numbered">Numbered List</option>
+                            </select>
+                        </div>
+                        <div class="control-group" id="toc-bullet-type-group">
+                            <label>Bullet Style</label>
+                            <select id="toc-bullet-type">
+                                <option value="•">Solid Circle ( • )</option>
+                                <option value="*">Asterisk ( * )</option>
+                                <option value="-">Hyphen ( - )</option>
+                                <option value="custom">Custom Symbol (Upload Image)</option>
+                            </select>
+                        </div>
+                        <div class="drop-zone" id="toc-custom-bullet-drop" style="display: none; padding: 16px;">
+                            <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+                            Drop SVG/PNG Bullet Here
+                        </div>
+                        <div class="control-row">
+                            <div class="control-group" style="flex:1;"><label>Start on Page</label><input type="number" id="toc-start-page" value="3"></div>
+                        </div>
                     </div>
                 </div>
 
                 <div class="gestalt-card">
                     <h3 class="subsection-title">Body Text</h3>
-                    <div class="drop-zone" id="text-drop">
+                    <div class="drop-zone" id="text-drop" style="padding: 16px;">
                         <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
-                        Drop Body File (.txt, .rtf, .doc)
+                        Drop .txt, .md, .rtf Here
                     </div>
                     <div class="control-row" style="margin-top: 8px;">
-                        <div class="control-group"><label>Start on Page</label><input type="number" id="body-start-page" value="5"></div>
-                    </div>
-                    <div class="help-text" style="margin-top: 8px;">
-                        <strong>Formatting:</strong> **H1**, *H2*, or I. II. for headers.<br>
-                        <strong>Pro Tip:</strong> Press <b>'T'</b> to open the Plain Text Editor panel to make quick changes without re-uploading.
+                        <div class="control-group" style="flex:1;">
+                            <label>Start on Page</label>
+                            <input type="number" id="body-start-page" value="1">
+                        </div>
                     </div>
                 </div>
-            </div>
-        </details>
 
-        <!-- 1. Document Setup -->
-        <details class="accordion" open>
-            <summary>1. Document Setup <span class="arrow"></span></summary>
-            <div class="accordion-content">
-                
                 <div class="gestalt-card">
-                    <h3 class="subsection-title">Format</h3>
-                    <div class="control-row">
-                        <div class="control-group">
-                            <label>Preset Size</label>
-                            <select id="doc-preset">
-                                <option value="A4">DIN A4</option>
-                                <option value="A5" selected>DIN A5</option>
-                                <option value="A6">DIN A6</option>
-                            </select>
-                        </div>
-                        <div class="control-group checkbox-row" style="margin-bottom: 8px;">
-                            <input type="checkbox" id="facing-pages" checked>
-                            <label for="facing-pages">Facing Pages</label>
-                        </div>
+                    <h3 class="subsection-title">Page Format</h3>
+                    <div class="control-group" style="margin-bottom: 0;">
+                        <label>Preset Size</label>
+                        <select id="doc-preset">
+                            <option value="A4">DIN A4 (210 × 297 mm)</option>
+                            <option value="A5" selected>DIN A5 (148 × 210 mm)</option>
+                            <option value="A6">DIN A6 (105 × 148 mm)</option>
+                        </select>
                     </div>
                 </div>
 
@@ -779,21 +785,30 @@
                 <!-- Justification Card -->
                 <div class="gestalt-card">
                     <h3 class="subsection-title">Justification</h3>
-                    <div class="control-group checkbox-row" style="margin-bottom: 8px;">
+                    <div class="control-group checkbox-row" style="margin-bottom: 12px;">
                         <input type="checkbox" id="justification-enable" checked>
                         <label for="justification-enable">Enable Justification Spacing</label>
                     </div>
                     
-                    <div style="display: grid; grid-template-columns: 85px 1fr 1fr 1fr; gap: 8px; align-items: center; margin-bottom: 4px;">
-                        <div></div>
-                        <label style="text-align: left; padding-bottom: 2px;">Minimum</label>
-                        <label style="text-align: left; padding-bottom: 2px;">Desired</label>
-                        <label style="text-align: left; padding-bottom: 2px;">Maximum</label>
-                        
-                        <label style="text-align: right; padding-right: 4px; font-weight: 600;">Word Spacing:</label>
-                        <div class="input-suffix" id="ws-min-wrap"><input type="number" id="word-space-min" value="80"><span>%</span></div>
-                        <div class="input-suffix" id="ws-des-wrap"><input type="number" id="word-space-des" value="100"><span>%</span></div>
-                        <div class="input-suffix" id="ws-max-wrap"><input type="number" id="word-space-max" value="133"><span>%</span></div>
+                    <div class="control-group" style="margin-bottom: 8px;">
+                        <label>Minimum Word Spacing</label>
+                        <div class="input-suffix" id="ws-min-wrap">
+                            <input type="number" id="word-space-min" value="80"><span>%</span>
+                        </div>
+                    </div>
+                    
+                    <div class="control-group" style="margin-bottom: 8px;">
+                        <label>Desired Word Spacing</label>
+                        <div class="input-suffix" id="ws-des-wrap">
+                            <input type="number" id="word-space-des" value="100"><span>%</span>
+                        </div>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label>Maximum Word Spacing</label>
+                        <div class="input-suffix" id="ws-max-wrap">
+                            <input type="number" id="word-space-max" value="133"><span>%</span>
+                        </div>
                     </div>
                 </div>
 
@@ -1052,10 +1067,16 @@
                     }
                 });
 
-                if (type === 'toc') this.tocTextBlocks = blocks;
-                if (type === 'body') this.bodyTextBlocks = blocks;
+                if (type === 'toc') {
+                    this.tocTextBlocks = blocks;
+                    this.queueReflow();
+                }
                 
-                this.queueReflow();
+                if (type === 'body') {
+                    this.bodyTextBlocks = blocks;
+                    // Auto-regenerate TOC whenever body text changes
+                    this.generateTOC(); 
+                }
             }
 
             // --- 2. Gestalt UI Listeners ---
@@ -1267,6 +1288,44 @@
                 });
                 applyJustification(); // Initialize default state
 
+                // --- TOC Generator UI Hooks ---
+                document.getElementById('btn-toggle-toc').addEventListener('click', (e) => {
+                    const settings = document.getElementById('toc-settings');
+                    if (settings.style.display === 'none') {
+                        settings.style.display = 'flex';
+                        e.target.innerText = "Update TOC";
+                        e.target.style.backgroundColor = "#1a1a1a";
+                        this.generateTOC();
+                    } else {
+                        this.generateTOC(); // Force regeneration
+                    }
+                });
+
+                document.getElementById('toc-list-type').addEventListener('change', (e) => {
+                    document.getElementById('toc-bullet-type-group').style.display = e.target.value === 'bullet' ? 'flex' : 'none';
+                    this.generateTOC();
+                });
+
+                document.getElementById('toc-bullet-type').addEventListener('change', (e) => {
+                    document.getElementById('toc-custom-bullet-drop').style.display = e.target.value === 'custom' ? 'flex' : 'none';
+                    this.generateTOC();
+                });
+
+                const tocCustomDrop = document.getElementById('toc-custom-bullet-drop');
+                tocCustomDrop.addEventListener('dragover', e => { e.preventDefault(); tocCustomDrop.classList.add('dragover'); });
+                tocCustomDrop.addEventListener('dragleave', () => tocCustomDrop.classList.remove('dragover'));
+                tocCustomDrop.addEventListener('drop', async e => {
+                    e.preventDefault();
+                    tocCustomDrop.classList.remove('dragover');
+                    const file = e.dataTransfer.files[0];
+                    if (file && file.type.match('image.*')) {
+                        tocCustomDrop.innerHTML = `<svg viewBox="0 0 24 24" style="width:24px;height:24px;fill:var(--primary-blue);margin-bottom:8px;"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>Loaded: ${file.name}`;
+                        tocCustomDrop.dataset.loadedUrl = URL.createObjectURL(file);
+                        this.generateTOC();
+                    }
+                });
+
+
                 // Trigger pagination reflow (TOC and Body Start pages)
                 ['page-numbers', 'page-show-start', 'page-show-end', 'page-count-start', 'toc-start-page', 'body-start-page'].forEach(id => {
                     const el = document.getElementById(id);
@@ -1283,6 +1342,7 @@
             initTextUploader() {
                 const setupDrop = (id, type) => {
                     const zone = document.getElementById(id);
+                    if (!zone) return;
                     zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
                     zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
                     zone.addEventListener('drop', async e => {
@@ -1310,7 +1370,6 @@
                 };
 
                 setupDrop('text-drop', 'body');
-                setupDrop('toc-drop', 'toc');
             }
 
             cleanRTF(rtf) {
@@ -1375,6 +1434,55 @@
                 text = text.replace(/\n{3,}/g, '\n\n');
                 
                 return text.trim();
+            }
+
+            // --- TOC Generation Engine ---
+            generateTOC() {
+                const settings = document.getElementById('toc-settings');
+                if (settings.style.display === 'none') {
+                    this.tocTextBlocks = [];
+                    this.queueReflow();
+                    return; 
+                }
+
+                this.tocTextBlocks = [];
+                const listType = document.getElementById('toc-list-type').value;
+                const bulletType = document.getElementById('toc-bullet-type').value;
+                
+                const title = document.createElement('h1');
+                title.innerText = "Inhaltsverzeichnis";
+                this.tocTextBlocks.push(title);
+
+                const list = document.createElement(listType === 'numbered' ? 'ol' : 'ul');
+                if (listType === 'numbered') {
+                    list.style.listStyleType = 'decimal';
+                    list.style.paddingLeft = '20pt';
+                } else {
+                    if (bulletType === 'custom' && document.getElementById('toc-custom-bullet-drop').dataset.loadedUrl) {
+                        list.style.listStyleImage = `url(${document.getElementById('toc-custom-bullet-drop').dataset.loadedUrl})`;
+                        list.style.paddingLeft = '20pt';
+                    } else {
+                        list.style.setProperty('--bullet-char', `"${bulletType} "`);
+                        list.style.paddingLeft = '14pt';
+                    }
+                }
+
+                // Procedurally scrape headings from the body text
+                this.bodyTextBlocks.forEach(block => {
+                    if (['H1', 'H2', 'H3'].includes(block.tagName)) {
+                        const li = document.createElement('li');
+                        li.innerText = block.innerText;
+                        
+                        // Hierarchical Indentation
+                        if (block.tagName === 'H2') li.style.marginLeft = '12pt';
+                        if (block.tagName === 'H3') li.style.marginLeft = '24pt';
+                        
+                        list.appendChild(li);
+                    }
+                });
+
+                this.tocTextBlocks.push(list);
+                this.queueReflow();
             }
 
             // --- 3.5 Custom Styles Generator ---
