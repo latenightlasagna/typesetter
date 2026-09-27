@@ -28,9 +28,9 @@
             --m-inside: 16mm;
             --m-outside: 20mm;
             
-            /* Grid Systems */
-            --grid-cols: 4;
-            --grid-gutter: 4.233mm;
+            /* Grid Systems Defaults from image_672620.png */
+            --grid-cols: 1;
+            --grid-gutter: 4.2mm;
             --guide-rows: 4;
             --guide-cols: 2;
             --guide-rgutter: 4mm;
@@ -104,6 +104,7 @@
             justify-content: space-between;
             align-items: center;
             background-color: var(--ui-panel);
+            color: var(--primary-blue); /* Highlighting the title as per screenshot */
             user-select: none;
             transition: background 0.2s ease, color 0.2s ease;
         }
@@ -355,6 +356,12 @@
             padding: 60px;
             width: calc((var(--doc-width) * 2) + 120px); 
             justify-content: center;
+            transition: width 0.3s ease;
+        }
+        
+        /* Adjust wrapper width for single page view to prevent spread alignment */
+        #document-container.facing-disabled {
+            width: calc(var(--doc-width) + 120px);
         }
 
         .page {
@@ -382,7 +389,8 @@
             padding: var(--m-top) var(--m-inside) var(--m-bottom) var(--m-outside);
             border-right: 1px solid rgba(0,0,0,0.05);
         }
-        /* Single Pages */
+        
+        /* Single Pages (1-Page Version) */
         .facing-disabled .page {
             padding: var(--m-top) var(--m-outside) var(--m-bottom) var(--m-inside);
             margin: 0 10px 20px 10px;
@@ -404,6 +412,7 @@
             text-align-last: auto;
             hyphens: none;
             word-spacing: normal;
+            break-after: avoid; /* Ensure headers don't get orphaned at bottom of columns */
         }
         
         .page h1 { font-size: 24pt; line-height: 1.2; margin-bottom: 12pt; font-weight: 700; column-span: all; }
@@ -435,15 +444,20 @@
             color: var(--primary-blue);
         }
         
-        .page ul { 
+        .page ul, .page ol { 
             font-size: var(--base-font-size); 
             line-height: var(--base-leading); 
             margin-bottom: var(--base-leading); 
-            padding-left: 14pt;
-            list-style-type: none; /* Removed default square */
         }
-        .page li { margin-bottom: 4pt; }
-        .page li::marker { content: var(--bullet-char); color: var(--primary-blue); }
+        .page ul {
+            padding-left: 14pt;
+            list-style-type: none;
+        }
+        .page li { 
+            margin-bottom: 4pt; 
+            break-inside: avoid; /* SMART TOC FIX: Prevents items from splitting across pages */
+        }
+        .page ul li::marker { content: var(--bullet-char); color: var(--primary-blue); }
 
         /* Procedural Grid Overlays */
         .grid-overlay {
@@ -459,6 +473,9 @@
         }
         .facing-enabled .page:nth-child(odd) .grid-overlay { left: var(--m-inside); right: var(--m-outside); }
         .facing-enabled .page:nth-child(even) .grid-overlay { left: var(--m-outside); right: var(--m-inside); }
+        
+        /* Keep grid consistent on single pages */
+        .facing-disabled .page .grid-overlay { left: var(--m-inside); right: var(--m-outside); }
         
         .show-guides .grid-overlay { display: grid; }
         .grid-overlay .grid-cell { border: 1px solid var(--guide-color); }
@@ -578,9 +595,9 @@
             <h1>Typesetting Engine</h1>
         </header>
 
-        <!-- 0. Content Input -->
+        <!-- 0. Document Setup -->
         <details class="accordion" open>
-            <summary>0. Content Input <span class="arrow"></span></summary>
+            <summary>0. Document Setup <span class="arrow"></span></summary>
             <div class="accordion-content">
                 
                 <div class="gestalt-card">
@@ -630,12 +647,20 @@
 
                 <div class="gestalt-card">
                     <h3 class="subsection-title">Page Format</h3>
-                    <div class="control-group" style="margin-bottom: 0;">
+                    <div class="control-group">
                         <label>Preset Size</label>
                         <select id="doc-preset">
                             <option value="A4">DIN A4 (210 × 297 mm)</option>
                             <option value="A5" selected>DIN A5 (148 × 210 mm)</option>
                             <option value="A6">DIN A6 (105 × 148 mm)</option>
+                        </select>
+                    </div>
+                    <!-- New Document Layout Selector -->
+                    <div class="control-group" style="margin-top: 4px;">
+                        <label>Document Layout</label>
+                        <select id="doc-layout">
+                            <option value="facing" selected>Facing Pages (Spreads)</option>
+                            <option value="single">Single Pages</option>
                         </select>
                     </div>
                 </div>
@@ -650,7 +675,7 @@
                     </div>
                     <hr style="border: 0; border-top: 1px solid var(--ui-bg); margin: 4px 0;">
                     <div class="control-grid">
-                        <div class="control-group"><label>Columns</label><div class="input-suffix"><input type="number" id="col-count" value="4"><span></span></div></div>
+                        <div class="control-group"><label>Columns</label><div class="input-suffix"><input type="number" id="col-count" value="1"><span></span></div></div>
                         <div class="control-group"><label>Gutter</label><div class="input-suffix"><input type="number" id="col-gutter" step="0.1" value="4.2"><span>mm</span></div></div>
                     </div>
                 </div>
@@ -663,7 +688,7 @@
                         <div class="control-group"><label>Cols</label><div class="input-suffix"><input type="number" id="guide-cols" value="2"><span></span></div></div>
                         <div class="control-group"><label>C-Gutter</label><div class="input-suffix"><input type="number" id="guide-cgutter" value="4"><span>mm</span></div></div>
                         <div class="control-group"><label>Layout Color</label><input type="color" id="guide-color-picker" value="#00ffff"></div>
-                        <div class="control-group"><label>Baseline Color</label><input type="color" id="baseline-color-picker" value="#0096ff"></div>
+                        <div class="control-group"><label>Baseline Color</label><input type="color" id="baseline-color-picker" value="#0080ff"></div>
                     </div>
                     <div class="control-group checkbox-row" style="margin-top: 8px;">
                         <input type="checkbox" id="toggle-guides" checked>
@@ -1111,6 +1136,17 @@
 
             // --- 2. Gestalt UI Listeners ---
             initUIListeners() {
+                // Layout Toggle Logic (Spreads vs Single Page)
+                document.getElementById('doc-layout').addEventListener('change', (e) => {
+                    if (e.target.value === 'facing') {
+                        this.docContainer.classList.add('facing-enabled');
+                        this.docContainer.classList.remove('facing-disabled');
+                    } else {
+                        this.docContainer.classList.remove('facing-enabled');
+                        this.docContainer.classList.add('facing-disabled');
+                    }
+                });
+
                 const updateCSSVar = (id, varName) => {
                     document.getElementById(id).addEventListener('input', (e) => {
                         let val = e.target.value;
@@ -1734,7 +1770,9 @@
                 // 2. Flow Body Text
                 if (this.bodyTextBlocks.length > 0) {
                     let bodyStart = parseInt(document.getElementById('body-start-page').value) || 1;
-                    // Ensure body text doesn't overlap TOC if start page is too low
+                    
+                    // Smart calculation: Ensure body text doesn't overlap TOC if start page is too low
+                    // If TOC ends on page 3, Body starts on page 4 automatically!
                     let actualBodyStart = Math.max(lastUsedPage + 1, bodyStart); 
                     
                     // Edge case: if no TOC, just use the specified start page
