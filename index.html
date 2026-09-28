@@ -616,6 +616,11 @@
             pointer-events: none; z-index: 100;
         }
 
+        /* Duplex Printing Fix */
+        .fix-duplex .sheet-back-side {
+            transform: rotate(180deg);
+        }
+
         /* --- FLAWLESS NATIVE PDF EXPORT --- */
         @media print {
             /* Force the DOM to unroll itself for the print crawler */
@@ -1005,6 +1010,11 @@
                     <label for="pf-fold-marks">Add Fold Marks (Center)</label>
                 </div>
                 
+                <div class="control-group checkbox-row" id="pf-duplex-group" style="margin-top: 8px;">
+                    <input type="checkbox" id="pf-duplex-fix">
+                    <label for="pf-duplex-fix" style="line-height: 1.2;">Rotate Back Pages 180°<br><span style="font-size: 9px; opacity: 0.7;">(Fixes upside-down on standard printers)</span></label>
+                </div>
+                
                 <div style="flex:1"></div>
                 
                 <button id="pf-print-btn" class="primary-btn" style="margin-bottom: 8px;">Print / Export PDF</button>
@@ -1304,6 +1314,8 @@
                 const layoutSel = document.getElementById('pf-layout');
                 const marksGroup = document.getElementById('pf-marks-group');
                 const foldCb = document.getElementById('pf-fold-marks');
+                const duplexGroup = document.getElementById('pf-duplex-group');
+                const duplexCb = document.getElementById('pf-duplex-fix');
                 const pfDoc = document.getElementById('preflight-doc-container');
                 const btnPrint = document.getElementById('pf-print-btn');
                 const originalBtnExport = document.getElementById('btn-export');
@@ -1357,6 +1369,7 @@
                                 } else {
                                     sheet.appendChild(clonedPages[i]);             // Left: Inner Front
                                     sheet.appendChild(clonedPages[total - 1 - i]); // Right: Inner Back
+                                    sheet.classList.add('sheet-back-side');        // Mark as backside for optional rotation
                                 }
                                 pfDoc.appendChild(sheet);
                             }
@@ -1369,6 +1382,10 @@
                                     sheet.appendChild(clonedPages[i+1]);
                                 } else {
                                     sheet.appendChild(createBlankPage());
+                                }
+                                // If it's a spread, every odd sheet is technically a back side if printing double-sided
+                                if ((i/2) % 2 !== 0) {
+                                    sheet.classList.add('sheet-back-side');
                                 }
                                 pfDoc.appendChild(sheet);
                             }
@@ -1403,10 +1420,19 @@
                 
                 layoutSel.addEventListener('change', (e) => {
                     marksGroup.style.display = (e.target.value === 'spreads' || e.target.value === 'booklet') ? 'flex' : 'none';
+                    duplexGroup.style.display = (e.target.value === 'spreads' || e.target.value === 'booklet') ? 'flex' : 'none';
                     renderPreview();
                 });
                 
                 foldCb.addEventListener('change', renderPreview);
+                
+                duplexCb.addEventListener('change', (e) => {
+                    if (e.target.checked) {
+                        pfDoc.classList.add('fix-duplex');
+                    } else {
+                        pfDoc.classList.remove('fix-duplex');
+                    }
+                });
                 
                 // WYSIWYG Print Execution
                 const triggerPrint = (layout, marks) => {
