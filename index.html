@@ -1,1030 +1,1041 @@
 <!DOCTYPE html>
-<html lang="en" style="--word-spacing: 0em;" data-lt-installed="true"><head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Procedural Typesetting Engine</title>
-<link rel="icon" href="data:image/svg+xml,&lt;svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='rgb(0,0,255)'&gt;&lt;path d='M2 3h9a2 2 0 0 1 2 2v14a2 2 0 0 0-2-2H2V3zm20 0h-9a2 2 0 0 0-2 2v14a2 2 0 0 1 2-2h9V3z'/&gt;&lt;/svg&gt;">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&amp;display=swap" rel="stylesheet">
-<style>
-:root {
-/* Ableton-inspired Swiss UI */
---ui-bg: #e6e6e6;
---ui-panel: #d4d4d4;
---ui-card: #ffffff;
---ui-text: #1a1a1a;
---ui-text-muted: #666666;
---primary-blue: rgb(0, 0, 255);
---border-color: #c0c0c0;
---focus-ring: rgba(0, 0, 255, 0.3);
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Procedural Typesetting Engine</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='rgb(0,0,255)'><path d='M2 3h9a2 2 0 0 1 2 2v14a2 2 0 0 0-2-2H2V3zm20 0h-9a2 2 0 0 0-2 2v14a2 2 0 0 1 2-2h9V3z'/></svg>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Swiss UI */
+            --ui-bg: #e6e6e6;
+            --ui-panel: #d4d4d4;
+            --ui-card: #ffffff;
+            --ui-text: #1a1a1a;
+            --ui-text-muted: #666666;
+            --primary-blue: rgb(0, 0, 255);
+            --border-color: #c0c0c0;
+            --focus-ring: rgba(0, 0, 255, 0.3);
+            
+            /* Document Geometry */
+            --doc-width: 148mm;
+            --doc-height: 210mm;
+            --m-top: 16mm;
+            --m-bottom: 24mm;
+            --m-inside: 16mm;
+            --m-outside: 20mm;
+            
+            /* Grid Systems Defaults */
+            --grid-cols: 1;
+            --grid-gutter: 4.2mm;
+            --guide-rows: 4;
+            --guide-cols: 2;
+            --guide-rgutter: 4mm;
+            --guide-cgutter: 4mm;
 
-/* Document Geometry */
---doc-width: 148mm;
---doc-height: 210mm;
---m-top: 16mm;
---m-bottom: 24mm;
---m-inside: 16mm;
---m-outside: 20mm;
+            /* Typography */
+            --base-font-size: 10pt;
+            --base-leading: 14pt;
+            
+            --guide-color: rgba(0, 255, 255, 0.4);
+            --guide-fill-color: rgba(255, 0, 255, 0.1);
+            --baseline-color: rgba(0, 150, 255, 0.2);
 
-/* Grid Systems Defaults from image_672620.png */
---grid-cols: 1;
---grid-gutter: 4.2mm;
---guide-rows: 4;
---guide-cols: 2;
---guide-rgutter: 4mm;
---guide-cgutter: 4mm;
+            /* Typography Settings */
+            --bullet-char: "• ";
+        }
 
-/* Typography */
---base-font-size: 10pt;
---base-leading: 14pt;
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
---guide-color: rgba(0, 255, 255, 0.4);
---guide-fill-color: rgba(255, 0, 255, 0.1);
---baseline-color: rgba(0, 150, 255, 0.2);
+        body {
+            font-family: 'IBM Plex Sans', sans-serif;
+            background-color: #f0f0f0;
+            color: var(--ui-text);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            font-size: 13px;
+        }
 
-/* Typography Settings */
---bullet-char: "• ";
-}
+        #ui-panel {
+            width: 340px;
+            min-width: 340px;
+            background-color: var(--ui-panel);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            z-index: 10;
+            box-shadow: 2px 0 15px rgba(0,0,0,0.08);
+        }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
+        header {
+            padding: 24px 20px;
+            background-color: var(--ui-panel);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
 
-body {
-font-family: 'IBM Plex Sans', sans-serif;
-background-color: #f0f0f0;
-color: var(--ui-text);
-display: flex;
-height: 100vh;
-overflow: hidden;
-font-size: 13px;
-}
+        header h1 {
+            font-size: 18px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: -0.5px;
+            color: var(--ui-text);
+        }
 
-#ui-panel {
-width: 340px;
-min-width: 340px;
-background-color: var(--ui-panel);
-display: flex;
-flex-direction: column;
-overflow-y: auto;
-z-index: 10;
-box-shadow: 2px 0 15px rgba(0,0,0,0.08);
-}
+        /* Accordions - Gestalt Grouping */
+        details.accordion {
+            border-top: 1px solid var(--border-color);
+        }
 
-header {
-padding: 24px 20px;
-background-color: var(--ui-panel);
-position: sticky;
-top: 0;
-z-index: 100;
-}
+        details.accordion summary {
+            padding: 16px 20px;
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            list-style: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: var(--ui-panel);
+            color: var(--primary-blue);
+            user-select: none;
+            transition: background 0.2s ease, color 0.2s ease;
+        }
 
-header h1 {
-font-size: 18px;
-font-weight: 700;
-text-transform: uppercase;
-letter-spacing: -0.5px;
-color: var(--ui-text);
-}
+        details.accordion summary::-webkit-details-marker { display: none; }
+        details.accordion summary:hover { background-color: #cccccc; color: var(--primary-blue); }
 
-/* Accordions - Gestalt Grouping */
-details.accordion {
-border-top: 1px solid var(--border-color);
-}
+        details.accordion summary .arrow {
+            width: 0; height: 0; 
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            border-top: 5px solid currentColor;
+            transition: transform 0.2s ease;
+        }
+        details[open].accordion summary .arrow { transform: rotate(180deg); }
 
-details.accordion summary {
-padding: 16px 20px;
-font-size: 13px;
-font-weight: 600;
-text-transform: uppercase;
-letter-spacing: 0.5px;
-cursor: pointer;
-list-style: none;
-display: flex;
-justify-content: space-between;
-align-items: center;
-background-color: var(--ui-panel);
-color: var(--primary-blue);
-user-select: none;
-transition: background 0.2s ease, color 0.2s ease;
-}
+        .accordion-content {
+            padding: 16px 20px 24px 20px;
+            background-color: var(--ui-bg);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
 
-details.accordion summary::-webkit-details-marker { display: none; }
-details.accordion summary:hover { background-color: #cccccc; color: var(--primary-blue); }
+        /* Common Regions (Cards) */
+        .gestalt-card {
+            background-color: var(--ui-card);
+            border-radius: 4px;
+            padding: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
 
-details.accordion summary .arrow {
-width: 0; height: 0; 
-border-left: 5px solid transparent;
-border-right: 5px solid transparent;
-border-top: 5px solid currentColor;
-transition: transform 0.2s ease;
-}
-details[open].accordion summary .arrow { transform: rotate(180deg); }
+        .subsection-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: var(--primary-blue);
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
 
-.accordion-content {
-padding: 16px 20px 24px 20px;
-background-color: var(--ui-bg);
-display: flex;
-flex-direction: column;
-gap: 16px;
-}
+        .control-row { display: flex; gap: 12px; align-items: flex-end; }
+        .control-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .control-group { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+        
+        .control-group.checkbox-row {
+            flex-direction: row;
+            align-items: center;
+            gap: 8px;
+        }
 
-/* Common Regions (Cards) */
-.gestalt-card {
-background-color: var(--ui-card);
-border-radius: 4px;
-padding: 16px;
-box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-display: flex;
-flex-direction: column;
-gap: 12px;
-}
+        label {
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--ui-text-muted);
+        }
 
-.subsection-title {
-font-size: 11px;
-text-transform: uppercase;
-color: var(--primary-blue);
-font-weight: 600;
-letter-spacing: 0.5px;
-margin-bottom: 4px;
-}
+        input[type="text"], input[type="number"], select {
+            background: #f7f7f7;
+            border: 1px solid transparent;
+            padding: 8px 10px;
+            font-family: 'IBM Plex Sans', sans-serif;
+            font-size: 12px;
+            border-radius: 3px;
+            outline: none;
+            width: 100%;
+            transition: all 0.2s;
+        }
 
-.control-row { display: flex; gap: 12px; align-items: flex-end; }
-.control-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.control-group { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+        input:hover, select:hover { background: #eeeeee; }
+        input:focus, select:focus {
+            background: #ffffff;
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 2px var(--focus-ring);
+        }
+        input[type="checkbox"] { accent-color: var(--primary-blue); width: 14px; height: 14px; }
 
-.control-group.checkbox-row {
-flex-direction: row;
-align-items: center;
-gap: 8px;
-}
+        .help-text { font-size: 10px; color: var(--ui-text-muted); line-height: 1.4; }
 
-label {
-font-size: 11px;
-font-weight: 500;
-color: var(--ui-text-muted);
-}
+        .drop-zone {
+            border: 1.5px dashed var(--border-color);
+            background: #fafafa;
+            padding: 24px;
+            text-align: center;
+            font-size: 12px;
+            color: var(--ui-text-muted);
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+        .drop-zone.dragover {
+            background: rgba(0, 0, 255, 0.05);
+            border-color: var(--primary-blue);
+            color: var(--primary-blue);
+        }
+        .drop-zone svg { width: 24px; height: 24px; fill: currentColor; opacity: 0.5; }
 
-input[type="text"], input[type="number"], select {
-background: #f7f7f7;
-border: 1px solid transparent;
-padding: 8px 10px;
-font-family: 'IBM Plex Sans', sans-serif;
-font-size: 12px;
-border-radius: 3px;
-outline: none;
-width: 100%;
-transition: all 0.2s;
-}
+        /* Custom Styles UI */
+        .style-row-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .custom-style-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+            background: #fafafa;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 8px;
+            transition: all 0.2s ease;
+        }
+        
+        .style-name {
+            font-size: 12px;
+            font-weight: 600;
+            width: 40px;
+            color: var(--primary-blue);
+        }
+        
+        .style-drop {
+            flex: 1 1 100%;
+            padding: 16px;
+            margin: 0;
+            min-width: 100px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .style-drop.filled {
+            flex: 1 1 auto;
+            padding: 6px 10px;
+            background: rgba(0, 0, 255, 0.05);
+            border-style: solid;
+            border-color: var(--primary-blue);
+            color: var(--primary-blue);
+        }
 
-input:hover, select:hover { background: #eeeeee; }
-input:focus, select:focus {
-background: #ffffff;
-border-color: var(--primary-blue);
-box-shadow: 0 0 0 2px var(--focus-ring);
-}
-input[type="checkbox"] { accent-color: var(--primary-blue); width: 14px; height: 14px; }
+        .style-actions {
+            display: none;
+            flex-direction: row;
+            gap: 4px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
 
-.help-text { font-size: 10px; color: var(--ui-text-muted); line-height: 1.4; }
+        .style-drop.filled + .style-actions {
+            display: flex;
+            opacity: 1;
+        }
+        
+        .style-btn {
+            background: #ffffff; border: 1px solid var(--border-color);
+            padding: 4px 8px; cursor: pointer; border-radius: 3px;
+            font-size: 11px; font-weight: 500; font-family: 'IBM Plex Sans';
+            transition: all 0.2s;
+        }
+        .style-btn:hover { background: #eeeeee; }
+        .style-btn.ab-btn.active { background: #1a1a1a; color: white; border-color: #1a1a1a; }
+        .style-btn.assign-btn { background: var(--primary-blue); color: white; border-color: var(--primary-blue); }
 
-.drop-zone {
-border: 1.5px dashed var(--border-color);
-background: #fafafa;
-padding: 24px;
-text-align: center;
-font-size: 12px;
-color: var(--ui-text-muted);
-cursor: pointer;
-border-radius: 4px;
-transition: all 0.2s ease;
-display: flex;
-flex-direction: column;
-align-items: center;
-gap: 8px;
-}
-.drop-zone.dragover {
-background: rgba(0, 0, 255, 0.05);
-border-color: var(--primary-blue);
-color: var(--primary-blue);
-}
-.drop-zone svg { width: 24px; height: 24px; fill: currentColor; opacity: 0.5; }
+        /* Paragraph Panel */
+        .separator {
+            border: 0;
+            border-top: 1px solid var(--border-color);
+            margin: 8px 0;
+            opacity: 0.5;
+        }
 
-/* Custom Styles UI */
-.style-row-container {
-display: flex;
-flex-direction: column;
-gap: 8px;
-}
+        .alignment-toolbar {
+            display: flex;
+            background: #f7f7f7;
+            border: 1px solid var(--border-color);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+        .align-btn {
+            flex: 1; background: transparent; border: none; padding: 8px 0;
+            border-right: 1px solid var(--border-color); cursor: pointer;
+            font-size: 14px; color: var(--ui-text-muted); transition: all 0.2s;
+            display: flex; justify-content: center; align-items: center;
+        }
+        .align-btn:last-child { border-right: none; }
+        .align-btn:hover { background: #eeeeee; }
+        .align-btn.active { background: #e0e0ff; color: var(--primary-blue); box-shadow: inset 0 0 0 1px var(--primary-blue); }
 
-.custom-style-row {
-display: flex;
-flex-wrap: wrap;
-align-items: center;
-gap: 8px;
-background: #fafafa;
-border: 1px solid var(--border-color);
-border-radius: 4px;
-padding: 8px;
-transition: all 0.2s ease;
-}
+        .input-suffix {
+            display: flex; align-items: center; gap: 6px;
+        }
+        .input-suffix input { width: 85px; padding-right: 4px; }
+        .input-suffix span { font-size: 11px; color: var(--ui-text-muted); }
 
-.style-name {
-font-size: 12px;
-font-weight: 600;
-width: 40px;
-color: var(--primary-blue);
-}
+        .slider-group { padding: 8px 0; }
+        .slider-labels { display: flex; justify-content: space-between; font-size: 10px; font-weight: 500; margin-bottom: 6px; }
+        .slider { -webkit-appearance: none; width: 100%; height: 4px; border-radius: 2px; background: var(--border-color); outline: none; }
+        .slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 12px; height: 12px; border-radius: 50%; background: var(--ui-text); cursor: pointer; border: 2px solid white; box-shadow: 0 0 0 1px var(--ui-text); }
 
-.style-drop {
-flex: 1 1 100%;
-padding: 16px;
-margin: 0;
-min-width: 100px;
-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
+        .primary-btn {
+            background-color: var(--primary-blue);
+            color: white;
+            border: none;
+            padding: 12px;
+            width: 100%;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            border-radius: 3px;
+            transition: opacity 0.2s, transform 0.1s;
+        }
+        .primary-btn:hover { opacity: 0.9; }
+        .primary-btn:active { transform: scale(0.98); }
 
-.style-drop.filled {
-flex: 1 1 auto;
-padding: 6px 10px;
-background: rgba(0, 0, 255, 0.05);
-border-style: solid;
-border-color: var(--primary-blue);
-color: var(--primary-blue);
-}
+        #workspace {
+            flex: 1;
+            background-color: #8c8c8c;
+            position: relative;
+            cursor: grab;
+            overflow: hidden;
+            background-image: radial-gradient(#7a7a7a 1px, transparent 0);
+            background-size: 20px 20px;
+        }
+        #workspace:active { cursor: grabbing; }
 
-.style-actions {
-display: none;
-flex-direction: row;
-gap: 4px;
-opacity: 0;
-transition: opacity 0.3s ease;
-}
+        #canvas {
+            transform-origin: 50% 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transition: transform 0.05s linear;
+        }
 
-.style-drop.filled + .style-actions {
-display: flex;
-opacity: 1;
-}
+        #document-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0;
+            padding: 60px;
+            width: calc((var(--doc-width) * 2) + 120px); 
+            justify-content: center;
+            transition: width 0.3s ease;
+        }
+        
+        #document-container.facing-disabled {
+            width: calc(var(--doc-width) + 120px);
+        }
 
-.style-btn {
-background: #ffffff; border: 1px solid var(--border-color);
-padding: 4px 8px; cursor: pointer; border-radius: 3px;
-font-size: 11px; font-weight: 500; font-family: 'IBM Plex Sans';
-transition: all 0.2s;
-}
-.style-btn:hover { background: #eeeeee; }
-.style-btn.ab-btn.active { background: #1a1a1a; color: white; border-color: #1a1a1a; }
-.style-btn.assign-btn { background: var(--primary-blue); color: white; border-color: var(--primary-blue); }
+        .page {
+            width: var(--doc-width);
+            height: var(--doc-height);
+            background-color: white;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            position: relative;
+            overflow: hidden;
+            flex-shrink: 0;
+            text-align: justify;
+            hyphens: auto;
+            hanging-punctuation: first last;
+            margin-bottom: 20px;
+        }
 
-/* Paragraph Panel Replica */
-.separator {
-border: 0;
-border-top: 1px solid var(--border-color);
-margin: 8px 0;
-opacity: 0.5;
-}
+        /* HARD-LOCKED Facing Pages Setup */
+        /* Instead of fragile :nth-child, we assign exact classes so they don't break during imposition */
+        .facing-enabled .page.odd-page {
+            padding: var(--m-top) var(--m-outside) var(--m-bottom) var(--m-inside);
+            border-left: 1px solid rgba(0,0,0,0.05);
+        }
+        .facing-enabled .page.even-page {
+            padding: var(--m-top) var(--m-inside) var(--m-bottom) var(--m-outside);
+            border-right: 1px solid rgba(0,0,0,0.05);
+        }
+        
+        /* Single Pages View */
+        .facing-disabled .page {
+            padding: var(--m-top) var(--m-outside) var(--m-bottom) var(--m-inside);
+            margin: 0 10px 20px 10px;
+        }
 
-.alignment-toolbar {
-display: flex;
-background: #f7f7f7;
-border: 1px solid var(--border-color);
-border-radius: 3px;
-overflow: hidden;
-margin-bottom: 8px;
-}
-.align-btn {
-flex: 1; background: transparent; border: none; padding: 8px 0;
-border-right: 1px solid var(--border-color); cursor: pointer;
-font-size: 14px; color: var(--ui-text-muted); transition: all 0.2s;
-display: flex; justify-content: center; align-items: center;
-}
-.align-btn:last-child { border-right: none; }
-.align-btn:hover { background: #eeeeee; }
-.align-btn.active { background: #e0e0ff; color: var(--primary-blue); box-shadow: inset 0 0 0 1px var(--primary-blue); }
+        /* Multicolumn Layout Setup */
+        .page-content {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            column-count: var(--grid-cols);
+            column-gap: var(--grid-gutter);
+            column-fill: auto; /* Fill columns sequentially to allow measurement */
+            overflow: hidden; /* Clips any subpixel bleed and enforces standard scrollWidth measurement */
+        }
 
-.input-suffix {
-display: flex; align-items: center; gap: 6px;
-}
-.input-suffix input { width: 85px; padding-right: 4px; }
-.input-suffix span { font-size: 11px; color: var(--ui-text-muted); }
+        /* Document Typography Styles */
+        .page h1, .page h2, .page h3 {
+            text-align: left;
+            text-align-last: auto;
+            hyphens: none;
+            word-spacing: normal;
+            break-after: avoid;
+        }
+        
+        .page h1 { font-size: 24pt; line-height: 1.2; margin-bottom: 12pt; font-weight: 700; column-span: all; }
+        .page h2 { font-size: 16pt; line-height: 1.3; margin-top: 14pt; margin-bottom: 7pt; font-weight: 500; }
+        .page h3 { font-size: 14pt; line-height: 1.3; margin-top: 10pt; margin-bottom: 5pt; font-weight: 600; }
+        
+        .page p { 
+            font-size: var(--base-font-size); 
+            line-height: var(--base-leading); 
+            margin-left: var(--p-ml, 0mm);
+            margin-right: var(--p-mr, 0mm);
+            text-indent: var(--p-ti, 0mm);
+            margin-top: var(--p-mt, 0mm);
+            margin-bottom: var(--p-mb, var(--base-leading));
+            text-align: var(--text-align, justify);
+            text-align-last: var(--text-align-last, left);
+            word-spacing: var(--word-spacing, 0em);
+        }
+        
+        .page p.dropcap::first-letter {
+            float: left;
+            font-size: calc(var(--dropcap-lines, 1) * var(--base-leading) * 1.15);
+            line-height: calc(var(--dropcap-lines, 1) * var(--base-leading) * 0.85);
+            padding-right: 4px;
+            font-weight: 700;
+            color: var(--primary-blue);
+        }
+        
+        .page ul, .page ol { 
+            font-size: var(--base-font-size); 
+            line-height: var(--base-leading); 
+            margin-bottom: var(--base-leading); 
+        }
+        .page ul {
+            padding-left: 14pt;
+            list-style-type: none;
+        }
+        .page li { 
+            margin-bottom: 4pt; 
+            break-inside: avoid; /* Prevent awkward breaks inside TOC chapters */
+        }
+        .page ul li::marker { content: var(--bullet-char); color: var(--primary-blue); }
 
-.slider-group { padding: 8px 0; }
-.slider-labels { display: flex; justify-content: space-between; font-size: 10px; font-weight: 500; margin-bottom: 6px; }
-.slider { -webkit-appearance: none; width: 100%; height: 4px; border-radius: 2px; background: var(--border-color); outline: none; }
-.slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 12px; height: 12px; border-radius: 50%; background: var(--ui-text); cursor: pointer; border: 2px solid white; box-shadow: 0 0 0 1px var(--ui-text); }
+        .grid-overlay {
+            position: absolute;
+            top: var(--m-top); left: var(--m-inside); right: var(--m-outside); bottom: var(--m-bottom);
+            pointer-events: none;
+            display: none;
+            grid-template-columns: repeat(var(--guide-cols), 1fr);
+            grid-template-rows: repeat(var(--guide-rows), 1fr);
+            column-gap: var(--guide-cgutter);
+            row-gap: var(--guide-rgutter);
+            z-index: 100;
+        }
+        .facing-enabled .page.odd-page .grid-overlay { left: var(--m-inside); right: var(--m-outside); }
+        .facing-enabled .page.even-page .grid-overlay { left: var(--m-outside); right: var(--m-inside); }
+        .facing-disabled .page .grid-overlay { left: var(--m-inside); right: var(--m-outside); }
+        
+        .show-guides .grid-overlay { display: grid; }
+        .grid-overlay .grid-cell { border: 1px solid var(--guide-color); }
+        .grid-overlay .grid-cell::after { content: ''; display: block; width: 100%; height: 100%; background-color: var(--guide-fill-color); }
 
-.primary-btn {
-background-color: var(--primary-blue);
-color: white;
-border: none;
-padding: 12px;
-width: 100%;
-font-weight: 600;
-font-size: 13px;
-cursor: pointer;
-border-radius: 3px;
-transition: opacity 0.2s, transform 0.1s;
-}
-.primary-btn:hover { opacity: 0.9; }
-.primary-btn:active { transform: scale(0.98); }
+        /* Baseline Grid Implementation */
+        .show-baseline .page-content {
+            background-image: linear-gradient(to bottom, var(--baseline-color) 1px, transparent 1px);
+            background-size: 100% var(--base-leading);
+            background-position: left calc(1em - 1px);
+        }
 
-#workspace {
-flex: 1;
-background-color: #8c8c8c;
-position: relative;
-cursor: grab;
-overflow: hidden;
-background-image: radial-gradient(#7a7a7a 1px, transparent 0);
-background-size: 20px 20px;
-}
-#workspace:active { cursor: grabbing; }
+        /* Page Numbering */
+        .page-number {
+            position: absolute;
+            bottom: calc(var(--m-bottom) / 2);
+            font-size: 9pt;
+            color: var(--ui-text-muted);
+            font-weight: 500;
+        }
+        .facing-enabled .page.odd-page .page-number { right: var(--m-outside); }
+        .facing-enabled .page.even-page .page-number { left: var(--m-outside); }
+        .facing-disabled .page .page-number { right: var(--m-outside); }
 
-#canvas {
-transform-origin: 50% 50%;
-position: absolute;
-top: 50%;
-left: 50%;
-transition: transform 0.05s linear;
-}
+        body.hide-extras .grid-overlay { display: none !important; }
+        body.hide-extras .page-content { background-image: none !important; }
 
-#document-container {
-display: flex;
-flex-wrap: wrap;
-gap: 0;
-padding: 60px;
-width: calc((var(--doc-width) * 2) + 120px); 
-justify-content: center;
-transition: width 0.3s ease;
-}
+        /* PIP Text Editor */
+        #pip-editor {
+            position: fixed;
+            top: 0;
+            right: -450px;
+            width: 450px;
+            height: 100vh;
+            background: #1a1a1a;
+            color: #d4d4d4;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            box-shadow: -5px 0 30px rgba(0,0,0,0.3);
+            transition: right 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease;
+        }
+        #pip-editor.open { right: 0; }
+        #pip-editor.active { box-shadow: inset 0 0 0 3px rgb(0, 0, 255), -5px 0 30px rgba(0,0,0,0.3); }
+        
+        #pip-editor header {
+            padding: 16px 20px;
+            background: #2a2a2a;
+            border-bottom: 1px solid #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        #pip-editor header h2 { font-size: 13px; color: #fff; text-transform: uppercase; letter-spacing: 0.5px; }
+        #pip-editor header span { font-size: 11px; color: #888; }
+        
+        #pip-toolbar {
+            display: flex;
+            background: #2a2a2a;
+            padding: 8px 20px;
+            gap: 8px;
+            border-bottom: 1px solid #444;
+        }
+        .pip-btn {
+            background: #444;
+            color: #fff;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 11px;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+        .pip-btn:hover { background: var(--primary-blue); }
 
-#document-container.facing-disabled {
-width: calc(var(--doc-width) + 120px);
-}
+        #pip-content {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+            color: #e6e6e6;
+            font-family: 'IBM Plex Sans', sans-serif;
+            font-size: 13px;
+            line-height: 1.6;
+            outline: none;
+            transition: opacity 0.3s ease;
+        }
+        #pip-editor:not(.active) #pip-content { opacity: 0.4; }
+        
+        /* WYSIWYG Styling inside PIP */
+        #pip-content h1 { font-size: 20px; font-weight: 700; margin-bottom: 10px; color: #fff; }
+        #pip-content h2 { font-size: 16px; font-weight: 600; margin: 15px 0 8px; color: #fff; }
+        #pip-content h3 { font-size: 14px; font-weight: 600; margin: 12px 0 6px; color: #ccc; }
+        #pip-content p { margin-bottom: 10px; }
+        #pip-content ul { margin-left: 20px; margin-bottom: 10px; list-style-type: disc; }
 
-.page {
-width: var(--doc-width);
-height: var(--doc-height);
-background-color: white;
-box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-position: relative;
-overflow: hidden;
-flex-shrink: 0;
-text-align: justify;
-hyphens: auto;
-hanging-punctuation: first last;
-margin-bottom: 20px;
-}
+        /* --- PREFLIGHT ENGINE STYLES --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.85); z-index: 2000;
+            display: flex; justify-content: center; align-items: center;
+        }
+        .preflight-window {
+            background: var(--ui-bg); width: 90vw; height: 90vh;
+            border-radius: 8px; display: flex; overflow: hidden;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        }
+        .preflight-sidebar {
+            width: 300px; background: var(--ui-panel); padding: 24px;
+            display: flex; flex-direction: column; gap: 16px;
+            border-right: 1px solid var(--border-color);
+            z-index: 2;
+        }
+        .preflight-preview-area {
+            flex: 1; background: #8c8c8c;
+            display: flex; justify-content: center; align-items: center;
+            overflow: auto; position: relative;
+            background-image: radial-gradient(#7a7a7a 1px, transparent 0);
+            background-size: 20px 20px;
+        }
+        #preflight-preview-scale {
+            transform-origin: center center;
+            transition: transform 0.2s;
+            display: flex; justify-content: center;
+        }
+        #preflight-doc-container {
+            display: flex; flex-wrap: wrap; gap: 0; justify-content: center; padding: 40px;
+        }
+        /* Override for Preflight layout flows */
+        .imposition-2up { flex-direction: column !important; align-items: center; gap: 20px !important; }
+        
+        /* The Physical A4 Sheet wrapper for 2-Up Imposition */
+        .print-sheet {
+            display: flex; flex-direction: row; background: white; margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15); position: relative;
+        }
+        .print-sheet .page { box-shadow: none; margin: 0; }
+        .show-fold-marks .print-sheet::after {
+            content: ''; position: absolute;
+            top: 0; bottom: 0; left: 50%;
+            border-left: 1px dashed rgba(0,0,0,0.6);
+            pointer-events: none; z-index: 100;
+        }
 
-/* Facing Pages Simulation */
-.facing-enabled .page:nth-child(odd) {
-padding: var(--m-top) var(--m-outside) var(--m-bottom) var(--m-inside);
-border-left: 1px solid rgba(0,0,0,0.05);
-}
-.facing-enabled .page:nth-child(even) {
-padding: var(--m-top) var(--m-inside) var(--m-bottom) var(--m-outside);
-border-right: 1px solid rgba(0,0,0,0.05);
-}
-
-/* Single Pages View */
-.facing-disabled .page {
-padding: var(--m-top) var(--m-outside) var(--m-bottom) var(--m-inside);
-margin: 0 10px 20px 10px;
-}
-
-/* Multicolumn Layout Setup */
-.page-content {
-width: 100%;
-height: 100%;
-position: relative;
-column-count: var(--grid-cols);
-column-gap: var(--grid-gutter);
-column-fill: auto; /* Fill columns sequentially to allow measurement */
-overflow: hidden; /* Clips any subpixel bleed and enforces standard scrollWidth measurement */
-}
-
-/* Document Typography Styles */
-.page h1, .page h2, .page h3 {
-text-align: left;
-text-align-last: auto;
-hyphens: none;
-word-spacing: normal;
-break-after: avoid;
-}
-
-.page h1 { font-size: 24pt; line-height: 1.2; margin-bottom: 12pt; font-weight: 700; column-span: all; }
-.page h2 { font-size: 16pt; line-height: 1.3; margin-top: 14pt; margin-bottom: 7pt; font-weight: 500; }
-.page h3 { font-size: 14pt; line-height: 1.3; margin-top: 10pt; margin-bottom: 5pt; font-weight: 600; }
-
-.page p { 
-font-size: var(--base-font-size); 
-line-height: var(--base-leading); 
-margin-left: var(--p-ml, 0mm);
-margin-right: var(--p-mr, 0mm);
-text-indent: var(--p-ti, 0mm);
-margin-top: var(--p-mt, 0mm);
-margin-bottom: var(--p-mb, var(--base-leading));
-text-align: var(--text-align, justify);
-text-align-last: var(--text-align-last, left);
-word-spacing: var(--word-spacing, 0em);
-}
-
-.page p.dropcap::first-letter {
-float: left;
-font-size: calc(var(--dropcap-lines, 1) * var(--base-leading) * 1.15);
-line-height: calc(var(--dropcap-lines, 1) * var(--base-leading) * 0.85);
-padding-right: 4px;
-font-weight: 700;
-color: var(--primary-blue);
-}
-
-.page ul, .page ol { 
-font-size: var(--base-font-size); 
-line-height: var(--base-leading); 
-margin-bottom: var(--base-leading); 
-}
-.page ul {
-padding-left: 14pt;
-list-style-type: none;
-}
-.page li { 
-margin-bottom: 4pt; 
-break-inside: avoid; /* Prevent awkward breaks inside TOC chapters */
-}
-.page ul li::marker { content: var(--bullet-char); color: var(--primary-blue); }
-
-.grid-overlay {
-position: absolute;
-top: var(--m-top); left: var(--m-inside); right: var(--m-outside); bottom: var(--m-bottom);
-pointer-events: none;
-display: none;
-grid-template-columns: repeat(var(--guide-cols), 1fr);
-grid-template-rows: repeat(var(--guide-rows), 1fr);
-column-gap: var(--guide-cgutter);
-row-gap: var(--guide-rgutter);
-z-index: 100;
-}
-.facing-enabled .page:nth-child(odd) .grid-overlay { left: var(--m-inside); right: var(--m-outside); }
-.facing-enabled .page:nth-child(even) .grid-overlay { left: var(--m-outside); right: var(--m-inside); }
-.facing-disabled .page .grid-overlay { left: var(--m-inside); right: var(--m-outside); }
-
-.show-guides .grid-overlay { display: grid; }
-.grid-overlay .grid-cell { border: 1px solid var(--guide-color); }
-.grid-overlay .grid-cell::after { content: ''; display: block; width: 100%; height: 100%; background-color: var(--guide-fill-color); }
-
-/* Baseline Grid Implementation */
-.show-baseline .page-content {
-background-image: linear-gradient(to bottom, var(--baseline-color) 1px, transparent 1px);
-background-size: 100% var(--base-leading);
-background-position: left calc(1em - 1px);
-}
-
-/* Page Numbering */
-.page-number {
-position: absolute;
-bottom: calc(var(--m-bottom) / 2);
-font-size: 9pt;
-color: var(--ui-text-muted);
-font-weight: 500;
-}
-.facing-enabled .page:nth-child(odd) .page-number { right: var(--m-outside); }
-.facing-enabled .page:nth-child(even) .page-number { left: var(--m-outside); }
-.facing-disabled .page .page-number { right: var(--m-outside); }
-
-body.hide-extras .grid-overlay { display: none !important; }
-body.hide-extras .page-content { background-image: none !important; }
-
-/* PIP Text Editor */
-#pip-editor {
-position: fixed;
-top: 0;
-right: -450px;
-width: 450px;
-height: 100vh;
-background: #1a1a1a;
-color: #d4d4d4;
-z-index: 1000;
-display: flex;
-flex-direction: column;
-box-shadow: -5px 0 30px rgba(0,0,0,0.3);
-transition: right 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease;
-}
-#pip-editor.open { right: 0; }
-#pip-editor.active { box-shadow: inset 0 0 0 3px rgb(0, 0, 255), -5px 0 30px rgba(0,0,0,0.3); }
-
-#pip-editor header {
-padding: 16px 20px;
-background: #2a2a2a;
-border-bottom: 1px solid #333;
-display: flex;
-justify-content: space-between;
-align-items: center;
-}
-#pip-editor header h2 { font-size: 13px; color: #fff; text-transform: uppercase; letter-spacing: 0.5px; }
-#pip-editor header span { font-size: 11px; color: #888; }
-
-#pip-toolbar {
-display: flex;
-background: #2a2a2a;
-padding: 8px 20px;
-gap: 8px;
-border-bottom: 1px solid #444;
-}
-.pip-btn {
-background: #444;
-color: #fff;
-border: none;
-padding: 6px 12px;
-border-radius: 3px;
-cursor: pointer;
-font-family: inherit;
-font-size: 11px;
-font-weight: 600;
-transition: background 0.2s;
-}
-.pip-btn:hover { background: var(--primary-blue); }
-
-#pip-content {
-flex: 1;
-padding: 24px;
-overflow-y: auto;
-color: #e6e6e6;
-font-family: 'IBM Plex Sans', sans-serif;
-font-size: 13px;
-line-height: 1.6;
-outline: none;
-transition: opacity 0.3s ease;
-}
-#pip-editor:not(.active) #pip-content { opacity: 0.4; }
-
-#pip-content h1 { font-size: 20px; font-weight: 700; margin-bottom: 10px; color: #fff; }
-#pip-content h2 { font-size: 16px; font-weight: 600; margin: 15px 0 8px; color: #fff; }
-#pip-content h3 { font-size: 14px; font-weight: 600; margin: 12px 0 6px; color: #ccc; }
-#pip-content p { margin-bottom: 10px; }
-#pip-content ul { margin-left: 20px; margin-bottom: 10px; list-style-type: disc; }
-
-/* Unfold Button & Tooltip */
-#unfold-btn {
-position: fixed;
-top: 24px;
-right: 24px;
-background: none;
-border: none;
-color: #666666;
-font-family: 'IBM Plex Sans', sans-serif;
-font-size: 13px;
-font-weight: 600;
-letter-spacing: 0.5px;
-cursor: pointer;
-z-index: 900;
-transition: color 0.2s;
-}
-#unfold-btn:hover {
-color: rgb(0, 0, 255);
-}
-#unfold-tooltip {
-position: fixed;
-pointer-events: none;
-background: #1a1a1a;
-color: #ffffff;
-padding: 6px 10px;
-border-radius: 4px;
-font-size: 11px;
-font-weight: 500;
-opacity: 0;
-transform: translateY(10px);
-transition: opacity 0.2s, transform 0.2s;
-z-index: 1000;
-white-space: nowrap;
-}
-#unfold-tooltip.visible {
-opacity: 1;
-transform: translateY(0);
-}
-
-/* Flawless Native Print Export */
-@media print {
-body, html { height: auto !important; overflow: visible !important; background: white !important; margin: 0; padding: 0; }
-#ui-panel, #pip-editor, #unfold-btn, #unfold-tooltip { display: none !important; }
-#workspace { background: none !important; overflow: visible !important; position: static !important; display: block !important; }
-#canvas { position: static !important; transform: none !important; display: block !important; }
-#document-container { padding: 0 !important; width: 100% !important; display: block !important; }
-.page { 
-margin: 0 !important; 
-box-shadow: none !important; 
-border: none !important; 
-page-break-after: always !important; 
-break-after: page !important; 
-}
-.grid-overlay { display: none !important; }
-.show-baseline .page-content { background-image: none !important; }
-}
-</style>
+        /* --- FLAWLESS NATIVE PDF EXPORT --- */
+        @media print {
+            /* Force the DOM to unroll itself for the print crawler */
+            body, html { height: auto !important; overflow: visible !important; background: white !important; margin: 0; padding: 0; }
+            
+            /* Hide UI Panels */
+            #ui-panel, #pip-editor, #unfold-btn, #unfold-tooltip, .modal-overlay { display: none !important; }
+            
+            /* Dismantle workspace locking constraints */
+            #workspace { background: none !important; overflow: visible !important; position: static !important; display: block !important; }
+            #canvas { position: static !important; transform: none !important; display: block !important; }
+            
+            /* Allow standard page breaks */
+            #document-container { padding: 0 !important; width: 100% !important; display: block !important; }
+            
+            .page { 
+                margin: 0 !important; 
+                box-shadow: none !important; 
+                border: none !important; 
+                page-break-after: always !important; 
+            }
+            
+            /* Special handling for sheets (2-up/Booklet) */
+            .print-sheet { box-shadow: none !important; margin: 0 !important; page-break-after: always !important; break-after: page !important; }
+            .print-sheet .page { page-break-after: avoid !important; }
+            .show-fold-marks .print-sheet::after { border-left: 1px dashed #000; }
+        }
+    </style>
 </head>
 <body class="show-extras">
-<button id="unfold-btn">UNFOLD</button>
-<div id="unfold-tooltip">press T to unfold &lt;3</div>
-<aside id="ui-panel">
-<header>
-<h1>Typesetting Engine</h1>
-</header>
+    
+    <!-- Unfold Button Mechanics -->
+    <div id="unfold-btn" style="position:fixed; top:20px; right:20px; z-index:100; font-size:11px; font-weight:600; color:#555; cursor:pointer; letter-spacing:1px; transition: color 0.2s;">UNFOLD</div>
+    <div id="unfold-tooltip" style="position:fixed; display:none; background:rgba(0,0,255,0.1); color:rgb(0,0,255); padding:6px 10px; border-radius:4px; font-size:10px; font-weight:500; pointer-events:none; z-index:101; white-space: nowrap;">press T to unfold &lt;3</div>
 
-<!-- 0. Document Setup -->
-<details class="accordion" open="">
-<summary>0. Document Setup <span class="arrow"></span></summary>
-<div class="accordion-content">
+    <aside id="ui-panel">
+        <header>
+            <h1>Typesetting Engine</h1>
+        </header>
 
-<div class="gestalt-card">
-<h3 class="subsection-title">Table of Contents</h3>
-<button id="btn-toggle-toc" class="primary-btn" style="margin-top: 0px; margin-bottom: 4px; padding: 10px; font-size: 12px; background-color: rgb(26, 26, 26);">Update TOC</button>
+        <!-- 0. Document Setup -->
+        <details class="accordion" open>
+            <summary>0. Document Setup <span class="arrow"></span></summary>
+            <div class="accordion-content">
+                
+                <div class="gestalt-card">
+                    <h3 class="subsection-title">Table of Contents</h3>
+                    <button id="btn-toggle-toc" class="primary-btn" style="margin-top: 0; margin-bottom: 4px; padding: 10px; font-size: 12px;">Generate TOC</button>
+                    
+                    <div id="toc-settings" style="display: none; flex-direction: column; gap: 12px; margin-top: 8px;">
+                        <div class="control-group">
+                            <label>TOC Layout Style</label>
+                            <select id="toc-layout-style">
+                                <option value="single">1-Page (Title & List Combined)</option>
+                                <option value="spread" selected>2-Page Spread (Title Left / List Right)</option>
+                            </select>
+                        </div>
+                        <div class="control-group">
+                            <label>List Type</label>
+                            <select id="toc-list-type">
+                                <option value="bullet">Bullet List</option>
+                                <option value="numbered">Numbered List</option>
+                            </select>
+                        </div>
+                        <div class="control-group" id="toc-bullet-type-group">
+                            <label>Bullet Style</label>
+                            <select id="toc-bullet-type">
+                                <option value="•">Solid Circle ( • )</option>
+                                <option value="*">Asterisk ( * )</option>
+                                <option value="-">Hyphen ( - )</option>
+                                <option value="custom">Custom Symbol (Upload Image)</option>
+                            </select>
+                        </div>
+                        <div class="drop-zone" id="toc-custom-bullet-drop" style="display: none; padding: 16px;">
+                            <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+                            Drop SVG/PNG Bullet Here
+                        </div>
+                        <div class="control-row">
+                            <div class="control-group" style="flex:1;"><label>Start on Page</label><input type="number" id="toc-start-page" value="3"></div>
+                        </div>
+                    </div>
+                </div>
 
-<div id="toc-settings" style="display: flex; flex-direction: column; gap: 12px; margin-top: 8px;">
-<div class="control-group">
-<label>TOC Layout Style</label>
-<select id="toc-layout-style">
-<option value="single">1-Page (Title &amp; List Combined)</option>
-<option value="spread" selected="">2-Page Spread (Title Left / List Right)</option>
-</select>
-</div>
-<div class="control-group">
-<label>List Type</label>
-<select id="toc-list-type">
-<option value="bullet">Bullet List</option>
-<option value="numbered">Numbered List</option>
-</select>
-</div>
-<div class="control-group" id="toc-bullet-type-group">
-<label>Bullet Style</label>
-<select id="toc-bullet-type">
-<option value="•">Solid Circle ( • )</option>
-<option value="*">Asterisk ( * )</option>
-<option value="-">Hyphen ( - )</option>
-<option value="custom">Custom Symbol (Upload Image)</option>
-</select>
-</div>
-<div class="drop-zone" id="toc-custom-bullet-drop" style="display: none; padding: 16px;">
-<svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"></path></svg>
-Drop SVG/PNG Bullet Here
-</div>
-<div class="control-row">
-<div class="control-group" style="flex:1;"><label>Start on Page</label><input type="number" id="toc-start-page" value="3"></div>
-</div>
-</div>
-</div>
+                <div class="gestalt-card">
+                    <h3 class="subsection-title">Body Text</h3>
+                    <div class="drop-zone" id="text-drop" style="padding: 16px;">
+                        <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+                        Drop your text here!
+                    </div>
+                    <div class="control-row" style="margin-top: 8px;">
+                        <div class="control-group" style="flex:1;">
+                            <label>Start on Page</label>
+                            <input type="number" id="body-start-page" value="1">
+                        </div>
+                    </div>
+                </div>
 
-<div class="gestalt-card">
-<h3 class="subsection-title">Body Text</h3>
-<div class="drop-zone" id="text-drop" style="padding: 16px;"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"></path></svg>Loaded: typesetting-backup.html</div>
-<div class="control-row" style="margin-top: 8px;">
-<div class="control-group" style="flex:1;">
-<label>Start on Page</label>
-<input type="number" id="body-start-page" value="1">
-</div>
-</div>
-</div>
+                <div class="gestalt-card">
+                    <h3 class="subsection-title">Page Format</h3>
+                    <div class="control-group">
+                        <label>Preset Size</label>
+                        <select id="doc-preset">
+                            <option value="A4">DIN A4 (210 × 297 mm)</option>
+                            <option value="A5" selected>DIN A5 (148 × 210 mm)</option>
+                            <option value="A6">DIN A6 (105 × 148 mm)</option>
+                        </select>
+                    </div>
+                    <div class="control-group" style="margin-top: 4px;">
+                        <label>Document Layout</label>
+                        <select id="doc-layout">
+                            <option value="facing" selected>Facing Pages (Spreads)</option>
+                            <option value="single">Single Pages</option>
+                        </select>
+                    </div>
+                </div>
 
-<div class="gestalt-card">
-<h3 class="subsection-title">Page Format</h3>
-<div class="control-group">
-<label>Preset Size</label>
-<select id="doc-preset">
-<option value="A4">DIN A4 (210 × 297 mm)</option>
-<option value="A5" selected="">DIN A5 (148 × 210 mm)</option>
-<option value="A6">DIN A6 (105 × 148 mm)</option>
-</select>
-</div>
-<div class="control-group" style="margin-top: 4px;">
-<label>Document Layout</label>
-<select id="doc-layout">
-<option value="facing" selected="">Facing Pages (Spreads)</option>
-<option value="single">Single Pages</option>
-</select>
-</div>
-</div>
+                <div class="gestalt-card">
+                    <h3 class="subsection-title">Margins & Columns</h3>
+                    <div class="control-grid">
+                        <div class="control-group"><label>Top</label><div class="input-suffix"><input type="number" id="margin-top" value="16"><span>mm</span></div></div>
+                        <div class="control-group"><label>Bottom</label><div class="input-suffix"><input type="number" id="margin-bottom" value="24"><span>mm</span></div></div>
+                        <div class="control-group"><label>Inside</label><div class="input-suffix"><input type="number" id="margin-inside" value="16"><span>mm</span></div></div>
+                        <div class="control-group"><label>Outside</label><div class="input-suffix"><input type="number" id="margin-outside" value="20"><span>mm</span></div></div>
+                    </div>
+                    <hr style="border: 0; border-top: 1px solid var(--ui-bg); margin: 4px 0;">
+                    <div class="control-grid">
+                        <div class="control-group"><label>Columns</label><div class="input-suffix"><input type="number" id="col-count" value="1"><span></span></div></div>
+                        <div class="control-group"><label>Gutter</label><div class="input-suffix"><input type="number" id="col-gutter" step="0.1" value="4.2"><span>mm</span></div></div>
+                    </div>
+                </div>
 
-<div class="gestalt-card">
-<h3 class="subsection-title">Margins &amp; Columns</h3>
-<div class="control-grid">
-<div class="control-group"><label>Top</label><div class="input-suffix"><input type="number" id="margin-top" value="16"><span>mm</span></div></div>
-<div class="control-group"><label>Bottom</label><div class="input-suffix"><input type="number" id="margin-bottom" value="24"><span>mm</span></div></div>
-<div class="control-group"><label>Inside</label><div class="input-suffix"><input type="number" id="margin-inside" value="16"><span>mm</span></div></div>
-<div class="control-group"><label>Outside</label><div class="input-suffix"><input type="number" id="margin-outside" value="20"><span>mm</span></div></div>
-</div>
-<hr style="border: 0; border-top: 1px solid var(--ui-bg); margin: 4px 0;">
-<div class="control-grid">
-<div class="control-group"><label>Columns</label><div class="input-suffix"><input type="number" id="col-count" value="1"><span></span></div></div>
-<div class="control-group"><label>Gutter</label><div class="input-suffix"><input type="number" id="col-gutter" step="0.1" value="4.2"><span>mm</span></div></div>
-</div>
-</div>
+                <div class="gestalt-card">
+                    <h3 class="subsection-title">Grid System </h3>
+                    <div class="control-grid">
+                        <div class="control-group"><label>Rows</label><div class="input-suffix"><input type="number" id="guide-rows" value="4"><span></span></div></div>
+                        <div class="control-group"><label>R-Gutter</label><div class="input-suffix"><input type="number" id="guide-rgutter" value="4"><span>mm</span></div></div>
+                        <div class="control-group"><label>Cols</label><div class="input-suffix"><input type="number" id="guide-cols" value="2"><span></span></div></div>
+                        <div class="control-group"><label>C-Gutter</label><div class="input-suffix"><input type="number" id="guide-cgutter" value="4"><span>mm</span></div></div>
+                        <div class="control-group"><label>Layout Color</label><input type="color" id="guide-color-picker" value="#00ffff"></div>
+                        <div class="control-group"><label>Baseline Color</label><input type="color" id="baseline-color-picker" value="#0080ff"></div>
+                    </div>
+                    <div class="control-group checkbox-row" style="margin-top: 8px;">
+                        <input type="checkbox" id="toggle-guides" checked>
+                        <label for="toggle-guides">Show Structure Guides</label>
+                    </div>
+                    <div class="control-group checkbox-row">
+                        <input type="checkbox" id="show-extras" checked>
+                        <label for="show-extras">Show Extras <span style="opacity: 0.5; font-size: 10px; margin-left: 4px;">(Press W)</span></label>
+                    </div>
+                    <div class="control-group checkbox-row">
+                        <input type="checkbox" id="baseline-grid" checked>
+                        <label for="baseline-grid">Show Baseline Grid (14pt)</label>
+                    </div>
+                </div>
 
-<div class="gestalt-card">
-<h3 class="subsection-title">Grid System (Müller-Brockmann)</h3>
-<div class="control-grid">
-<div class="control-group"><label>Rows</label><div class="input-suffix"><input type="number" id="guide-rows" value="4"><span></span></div></div>
-<div class="control-group"><label>R-Gutter</label><div class="input-suffix"><input type="number" id="guide-rgutter" value="4"><span>mm</span></div></div>
-<div class="control-group"><label>Cols</label><div class="input-suffix"><input type="number" id="guide-cols" value="2"><span></span></div></div>
-<div class="control-group"><label>C-Gutter</label><div class="input-suffix"><input type="number" id="guide-cgutter" value="4"><span>mm</span></div></div>
-<div class="control-group"><label>Layout Color</label><input type="color" id="guide-color-picker" value="#00ffff"></div>
-<div class="control-group"><label>Baseline Color</label><input type="color" id="baseline-color-picker" value="#0080ff"></div>
-</div>
-<div class="control-group checkbox-row" style="margin-top: 8px;">
-<input type="checkbox" id="toggle-guides" checked="">
-<label for="toggle-guides">Show Structure Guides</label>
-</div>
-<div class="control-group checkbox-row">
-<input type="checkbox" id="show-extras" checked="">
-<label for="show-extras">Show Extras <span style="opacity: 0.5; font-size: 10px; margin-left: 4px;">(Press W)</span></label>
-</div>
-<div class="control-group checkbox-row">
-<input type="checkbox" id="baseline-grid" checked="">
-<label for="baseline-grid">Show Baseline Grid (14pt)</label>
-</div>
-</div>
+                <div class="gestalt-card">
+                    <h3 class="subsection-title">Pagination</h3>
+                    <div class="control-group checkbox-row" style="margin-bottom: 8px;">
+                        <input type="checkbox" id="page-numbers" checked>
+                        <label for="page-numbers">Enable Page Numbering</label>
+                    </div>
+                    <div class="control-grid">
+                        <div class="control-group"><label>Show from Page</label><input type="number" id="page-show-start" value="1"></div>
+                        <div class="control-group"><label>Show until Page</label><input type="number" id="page-show-end" value="999"></div>
+                        <div class="control-group" style="grid-column: 1 / -1;"><label>Start counting at #</label><input type="number" id="page-count-start" value="1"></div>
+                    </div>
+                </div>
 
-<div class="gestalt-card">
-<h3 class="subsection-title">Pagination</h3>
-<div class="control-group checkbox-row" style="margin-bottom: 8px;">
-<input type="checkbox" id="page-numbers" checked="">
-<label for="page-numbers">Enable Page Numbering</label>
-</div>
-<div class="control-grid">
-<div class="control-group"><label>Show from Page</label><input type="number" id="page-show-start" value="1"></div>
-<div class="control-group"><label>Show until Page</label><input type="number" id="page-show-end" value="999"></div>
-<div class="control-group" style="grid-column: 1 / -1;"><label>Start counting at #</label><input type="number" id="page-count-start" value="1"></div>
-</div>
-</div>
+            </div>
+        </details>
 
-</div>
-</details>
+        <!-- 2. Paragraph Styles -->
+        <details class="accordion">
+            <summary>2. Typography <span class="arrow"></span></summary>
+            <div class="accordion-content">
+                <!-- Font Assignment Card -->
+                <div class="gestalt-card">
+                    <div class="control-group checkbox-row">
+                        <input type="checkbox" id="auto-styles" checked>
+                        <label for="auto-styles">Automatic Paragraph Styles</label>
+                    </div>
+                    <div class="help-text" style="margin-bottom: 12px; margin-top:-4px;">Uncheck to configure custom styles individually.</div>
+                    
+                    <div id="auto-style-section">
+                        <div class="drop-zone" id="global-font-drop">
+                            <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                            Drop Font Family Here (.ttf, .woff2)
+                        </div>
+                    </div>
 
-<!-- 2. Paragraph Styles -->
-<details class="accordion">
-<summary>2. Typography <span class="arrow"></span></summary>
-<div class="accordion-content">
-<!-- Font Assignment Card -->
-<div class="gestalt-card">
-<div class="control-group checkbox-row">
-<input type="checkbox" id="auto-styles" checked="">
-<label for="auto-styles">Automatic Paragraph Styles</label>
-</div>
-<div class="help-text" style="margin-bottom: 12px; margin-top:-4px;">Uncheck to configure custom styles individually.</div>
+                    <div id="custom-style-section" style="display: none;">
+                        <div class="style-row-container" id="custom-styles-container"></div>
+                    </div>
+                </div>
 
-<div id="auto-style-section">
-<div class="drop-zone" id="global-font-drop">
-<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"></path></svg>
-Drop Font Family Here (.ttf, .woff2)
-</div>
-</div>
+                <!-- Paragraph Formatting Replica Card -->
+                <div class="gestalt-card">
+                    <h3 class="subsection-title">Paragraph Formatting</h3>
+                    <div class="alignment-toolbar" id="text-align-toolbar">
+                        <button class="align-btn" data-align="left" data-last="auto" title="Align Left">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M2 4h20v3H2z M2 9h15v3H2z M2 14h20v3H2z M2 19h10v3H2z"/></svg>
+                        </button>
+                        <button class="align-btn" data-align="center" data-last="auto" title="Align Center">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M2 4h20v3H2z M4.5 9h15v3H4.5z M2 14h20v3H2z M7 19h10v3H7z"/></svg>
+                        </button>
+                        <button class="align-btn" data-align="right" data-last="auto" title="Align Right">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M2 4h20v3H2z M7 9h15v3H7z M2 14h20v3H2z M12 19h10v3H12z"/></svg>
+                        </button>
+                        <button class="align-btn active" data-align="justify" data-last="left" title="Justify Left Last">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M2 4h20v3H2z M2 9h20v3H2z M2 14h20v3H2z M2 19h10v3H2z"/></svg>
+                        </button>
+                        <button class="align-btn" data-align="justify" data-last="center" title="Justify Center Last">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M2 4h20v3H2z M2 9h20v3H2z M2 14h20v3H2z M7 19h10v3H7z"/></svg>
+                        </button>
+                        <button class="align-btn" data-align="justify" data-last="right" title="Justify Right Last">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M2 4h20v3H2z M2 9h20v3H2z M2 14h20v3H2z M12 19h10v3H12z"/></svg>
+                        </button>
+                        <button class="align-btn" data-align="justify" data-last="justify" title="Justify All">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M2 4h20v3H2z M2 9h20v3H2z M2 14h20v3H2z M2 19h20v3H2z"/></svg>
+                        </button>
+                    </div>
+                    
+                    <hr class="separator">
+                    
+                    <div class="control-grid">
+                        <div class="control-group"><label>Left Indent</label><div class="input-suffix"><input type="number" id="p-ml" value="0"><span>mm</span></div></div>
+                        <div class="control-group"><label>Right Indent</label><div class="input-suffix"><input type="number" id="p-mr" value="0"><span>mm</span></div></div>
+                    </div>
+                    <div class="control-grid">
+                        <div class="control-group"><label>First Line Indent</label><div class="input-suffix"><input type="number" id="p-ti" value="0"><span>mm</span></div></div>
+                        <div class="control-group"><label>Last Line Right</label><div class="input-suffix"><input type="number" id="p-llri" value="0"><span>mm</span></div></div>
+                    </div>
+                    
+                    <hr class="separator">
+                    
+                    <div class="control-grid">
+                        <div class="control-group"><label>Space Before</label><div class="input-suffix"><input type="number" id="p-mt" value="0"><span>mm</span></div></div>
+                        <div class="control-group"><label>Space After</label><div class="input-suffix"><input type="number" id="p-mb" value="5"><span>mm</span></div></div>
+                    </div>
 
-<div id="custom-style-section" style="display: none;">
-<div class="style-row-container" id="custom-styles-container"><div class="custom-style-row">
-<span class="style-name">H1</span>
-<div class="drop-zone style-drop" id="drop-H1">Drop Font</div>
-<div class="style-actions">
-<button class="style-btn" title="Edit Metrics">⚙</button>
-<button class="style-btn ab-btn" title="A/B Compare">A/B</button>
-<button class="style-btn assign-btn" title="Assign">Assign</button>
-</div>
-</div><div class="custom-style-row">
-<span class="style-name">H2</span>
-<div class="drop-zone style-drop" id="drop-H2">Drop Font</div>
-<div class="style-actions">
-<button class="style-btn" title="Edit Metrics">⚙</button>
-<button class="style-btn ab-btn" title="A/B Compare">A/B</button>
-<button class="style-btn assign-btn" title="Assign">Assign</button>
-</div>
-</div><div class="custom-style-row">
-<span class="style-name">H3</span>
-<div class="drop-zone style-drop" id="drop-H3">Drop Font</div>
-<div class="style-actions">
-<button class="style-btn" title="Edit Metrics">⚙</button>
-<button class="style-btn ab-btn" title="A/B Compare">A/B</button>
-<button class="style-btn assign-btn" title="Assign">Assign</button>
-</div>
-</div><div class="custom-style-row">
-<span class="style-name">Para</span>
-<div class="drop-zone style-drop" id="drop-Para">Drop Font</div>
-<div class="style-actions">
-<button class="style-btn" title="Edit Metrics">⚙</button>
-<button class="style-btn ab-btn" title="A/B Compare">A/B</button>
-<button class="style-btn assign-btn" title="Assign">Assign</button>
-</div>
-</div><div class="custom-style-row">
-<span class="style-name">Bullet</span>
-<div class="drop-zone style-drop" id="drop-Bullet">Drop Font</div>
-<div class="style-actions">
-<button class="style-btn" title="Edit Metrics">⚙</button>
-<button class="style-btn ab-btn" title="A/B Compare">A/B</button>
-<button class="style-btn assign-btn" title="Assign">Assign</button>
-</div>
-</div><div class="custom-style-row">
-<span class="style-name">Page#</span>
-<div class="drop-zone style-drop" id="drop-Page#">Drop Font</div>
-<div class="style-actions">
-<button class="style-btn" title="Edit Metrics">⚙</button>
-<button class="style-btn ab-btn" title="A/B Compare">A/B</button>
-<button class="style-btn assign-btn" title="Assign">Assign</button>
-</div>
-</div></div>
-</div>
-</div>
+                    <hr class="separator">
 
-<!-- Paragraph Formatting Replica Card -->
-<div class="gestalt-card">
-<h3 class="subsection-title">Paragraph Formatting</h3>
-<div class="alignment-toolbar" id="text-align-toolbar">
-<button class="align-btn" data-align="left" data-last="auto" title="Align Left">
-<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M2 4h20v3H2z M2 9h15v3H2z M2 14h20v3H2z M2 19h10v3H2z"></path></svg>
-</button>
-<button class="align-btn" data-align="center" data-last="auto" title="Align Center">
-<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M2 4h20v3H2z M4.5 9h15v3H4.5z M2 14h20v3H2z M7 19h10v3H7z"></path></svg>
-</button>
-<button class="align-btn" data-align="right" data-last="auto" title="Align Right">
-<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M2 4h20v3H2z M7 9h15v3H7z M2 14h20v3H2z M12 19h10v3H12z"></path></svg>
-</button>
-<button class="align-btn active" data-align="justify" data-last="left" title="Justify Left Last">
-<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M2 4h20v3H2z M2 9h20v3H2z M2 14h20v3H2z M2 19h10v3H2z"></path></svg>
-</button>
-<button class="align-btn" data-align="justify" data-last="center" title="Justify Center Last">
-<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M2 4h20v3H2z M2 9h20v3H2z M2 14h20v3H2z M7 19h10v3H7z"></path></svg>
-</button>
-<button class="align-btn" data-align="justify" data-last="right" title="Justify Right Last">
-<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M2 4h20v3H2z M2 9h20v3H2z M2 14h20v3H2z M12 19h10v3H12z"></path></svg>
-</button>
-<button class="align-btn" data-align="justify" data-last="justify" title="Justify All">
-<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M2 4h20v3H2z M2 9h20v3H2z M2 14h20v3H2z M2 19h20v3H2z"></path></svg>
-</button>
-</div>
+                    <div class="control-grid">
+                        <div class="control-group"><label>Drop Cap Lines</label><div class="input-suffix"><input type="number" id="p-drop-lines" value="0"><span></span></div></div>
+                        <div class="control-group">
+                            <label>Bullet Style</label>
+                            <select id="bullet-style">
+                                <option value="•">Solid Circle ( • )</option>
+                                <option value="*">Asterisk ( * )</option>
+                                <option value="-">Hyphen ( - )</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
 
-<hr class="separator">
+                <!-- Justification Card -->
+                <div class="gestalt-card">
+                    <h3 class="subsection-title">Justification</h3>
+                    <div class="control-group checkbox-row" style="margin-bottom: 12px;">
+                        <input type="checkbox" id="justification-enable" checked>
+                        <label for="justification-enable">Enable Justification Spacing</label>
+                    </div>
+                    
+                    <div class="control-group" style="margin-bottom: 8px;">
+                        <label>Minimum Word Spacing</label>
+                        <div class="input-suffix" id="ws-min-wrap">
+                            <input type="number" id="word-space-min" value="90"><span>%</span>
+                        </div>
+                    </div>
+                    
+                    <div class="control-group" style="margin-bottom: 8px;">
+                        <label>Desired Word Spacing</label>
+                        <div class="input-suffix" id="ws-des-wrap">
+                            <input type="number" id="word-space-des" value="95"><span>%</span>
+                        </div>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label>Maximum Word Spacing</label>
+                        <div class="input-suffix" id="ws-max-wrap">
+                            <input type="number" id="word-space-max" value="100"><span>%</span>
+                        </div>
+                    </div>
+                </div>
 
-<div class="control-grid">
-<div class="control-group"><label>Left Indent</label><div class="input-suffix"><input type="number" id="p-ml" value="0"><span>mm</span></div></div>
-<div class="control-group"><label>Right Indent</label><div class="input-suffix"><input type="number" id="p-mr" value="0"><span>mm</span></div></div>
-</div>
-<div class="control-grid">
-<div class="control-group"><label>First Line Indent</label><div class="input-suffix"><input type="number" id="p-ti" value="0"><span>mm</span></div></div>
-<div class="control-group"><label>Last Line Right</label><div class="input-suffix"><input type="number" id="p-llri" value="0"><span>mm</span></div></div>
-</div>
+                <!-- InDesign H&J Port Card -->
+                <div class="gestalt-card">
+                    <h3 class="subsection-title">Hyphenation & Language</h3>
+                    <div class="control-group" style="margin-bottom: 12px;">
+                        <label>Dictionary (Native HarfBuzz)</label>
+                        <select id="doc-lang">
+                            <option value="de" selected>German</option>
+                            <option value="en">English (US/UK)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="control-group checkbox-row" style="margin-bottom: 12px;">
+                        <input type="checkbox" id="hyph-enable" checked>
+                        <label for="hyph-enable">Hyphenate</label>
+                    </div>
+                    
+                    <div class="control-grid">
+                        <div class="control-group"><label>Words with at Least:</label><div class="input-suffix"><input type="number" id="hyph-words" value="5"><span>letters</span></div></div>
+                        <div class="control-group"><label>After First:</label><div class="input-suffix"><input type="number" id="hyph-after" value="2"><span>letters</span></div></div>
+                        <div class="control-group"><label>Before Last:</label><div class="input-suffix"><input type="number" id="hyph-before" value="2"><span>letters</span></div></div>
+                        <div class="control-group"><label>Hyphen Limit:</label><div class="input-suffix"><input type="number" id="hyph-limit" value="3"><span>hyphens</span></div></div>
+                        <div class="control-group" style="grid-column: 1 / -1;"><label>Hyphenation Zone:</label><div class="input-suffix"><input type="text" id="hyph-zone" value="16 mm"></div></div>
+                    </div>
+                    
+                    <div class="control-group slider-group" style="margin: 16px 0;">
+                        <div class="slider-labels"><span>Better Spacing</span><span>Fewer Hyphens</span></div>
+                        <input type="range" min="1" max="10" value="5" class="slider" title="Algorithm Priority">
+                    </div>
 
-<hr class="separator">
+                    <div class="control-group checkbox-row"><input type="checkbox" id="hyph-cap" checked><label for="hyph-cap">Hyphenate Capitalized Words</label></div>
+                    <div class="control-group checkbox-row"><input type="checkbox" id="hyph-last" checked><label for="hyph-last">Hyphenate Last Word</label></div>
+                    <div class="control-group checkbox-row"><input type="checkbox" id="hyph-col" checked><label for="hyph-col">Hyphenate Across Column</label></div>
+                </div>
+            </div>
+        </details>
 
-<div class="control-grid">
-<div class="control-group"><label>Space Before</label><div class="input-suffix"><input type="number" id="p-mt" value="0"><span>mm</span></div></div>
-<div class="control-group"><label>Space After</label><div class="input-suffix"><input type="number" id="p-mb" value="5"><span>mm</span></div></div>
-</div>
+        <!-- 3. Export -->
+        <details class="accordion">
+            <summary>3. OUTPUT <span class="arrow"></span></summary>
+            <div class="accordion-content">
+                <div class="gestalt-card">
+                    <button id="btn-preflight" class="primary-btn" style="background-color: #1a1a1a; margin-bottom: 8px;">Preflight Document</button>
+                    <div class="control-group">
+                        <label>Adobe PDF Preset</label>
+                        <select><option>[High Quality Print]</option><option>[Press Quality]</option></select>
+                    </div>
+                    <div class="control-group">
+                        <label>Compatibility</label>
+                        <select><option>PDF/X-4:2010 (Acrobat 7)</option></select>
+                    </div>
+                    <button id="btn-export" class="primary-btn">Export PDF (Direct)</button>
+                </div>
+            </div>
+        </details>
+    </aside>
 
-<hr class="separator">
+    <main id="workspace">
+        <div id="canvas">
+            <div id="document-container" lang="de" class="facing-enabled show-guides show-baseline">
+                <!-- Pages flow here procedurally -->
+            </div>
+        </div>
+    </main>
 
-<div class="control-grid">
-<div class="control-group"><label>Drop Cap Lines</label><div class="input-suffix"><input type="number" id="p-drop-lines" value="0"><span></span></div></div>
-<div class="control-group">
-<label>Bullet Style</label>
-<select id="bullet-style">
-<option value="•">Solid Circle ( • )</option>
-<option value="*">Asterisk ( * )</option>
-<option value="-">Hyphen ( - )</option>
-</select>
-</div>
-</div>
-</div>
+    <!-- PIP Text Editor -->
+    <aside id="pip-editor">
+        <header>
+            <h2>Text & Style Editor</h2>
+            <span>Click outside to close</span>
+        </header>
+        <div id="pip-toolbar">
+            <button class="pip-btn" data-tag="H1">H1</button>
+            <button class="pip-btn" data-tag="H2">H2</button>
+            <button class="pip-btn" data-tag="H3">H3</button>
+            <button class="pip-btn" data-tag="P">Body</button>
+            <button class="pip-btn" data-tag="UL">List</button>
+            <div style="width: 1px; background: #555; margin: 0 4px;"></div>
+            <button class="pip-btn" id="btn-page-break" title="Force text to next page">Page Break</button>
+            <button class="pip-btn" id="btn-save-text" title="Download text as .html to save formatting" style="margin-left: auto; background-color: var(--primary-blue);">↓ Save</button>
+        </div>
+        <div id="pip-content" contenteditable="true" spellcheck="false"></div>
+    </aside>
 
-<!-- Justification Card -->
-<div class="gestalt-card">
-<h3 class="subsection-title">Justification</h3>
-<div class="control-group checkbox-row" style="margin-bottom: 12px;">
-<input type="checkbox" id="justification-enable" checked>
-<label for="justification-enable">Enable Justification Spacing</label>
-</div>
+    <!-- Preflight Modal Window -->
+    <div class="modal-overlay" id="preflight-modal" style="display:none;">
+        <div class="preflight-window">
+            <div class="preflight-sidebar">
+                <h2 style="color:var(--primary-blue); font-size:16px; margin-bottom:0; text-transform:uppercase;">Preflight</h2>
+                <p style="font-size:11px; color:#888; margin-top:-8px; margin-bottom:12px;">Review imposition and export</p>
+                
+                <div class="control-group">
+                    <label>Print Layout Options</label>
+                    <select id="pf-layout">
+                        <option value="single">Single Pages (Standard PDF)</option>
+                        <option value="spreads">2-Up Spreads (Sequential 1-2, 3-4)</option>
+                        <option value="booklet" selected>Booklet Imposition (Magazine Fold)</option>
+                    </select>
+                </div>
+                
+                <div class="control-group checkbox-row" id="pf-marks-group" style="margin-top: 8px;">
+                    <input type="checkbox" id="pf-fold-marks" checked>
+                    <label for="pf-fold-marks">Add Fold Marks (Center)</label>
+                </div>
+                
+                <div style="flex:1"></div>
+                
+                <button id="pf-print-btn" class="primary-btn" style="margin-bottom: 8px;">Print / Export PDF</button>
+                <button id="pf-close-btn" class="primary-btn" style="background:#555;">Close Preflight</button>
+            </div>
+            <div class="preflight-preview-area" id="pf-preview-area">
+                <div id="preflight-preview-scale">
+                    <div id="preflight-doc-container">
+                        <!-- Imposition Preview Pages injected here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-<div class="control-group" style="margin-bottom: 8px;">
-<label>Minimum Word Spacing</label>
-<div class="input-suffix" id="ws-min-wrap">
-<input type="number" id="word-space-min" value="90"><span>%</span>
-</div>
-</div>
+    <script>
+        class TypesettingEngine {
+            constructor() {
+                this.workspace = document.getElementById('workspace');
+                this.canvas = document.getElementById('canvas');
+                this.docContainer = document.getElementById('document-container');
+                
+                // Workspace State - Centered Initialization
+                this.scale = 0.8;
+                this.translateX = 0;
+                this.translateY = 0;
+                this.isPanning = false;
+                this.startX = 0;
+                this.startY = 0;
 
-<div class="control-group" style="margin-bottom: 8px;">
-<label>Desired Word Spacing</label>
-<div class="input-suffix" id="ws-des-wrap">
-<input type="number" id="word-space-des" value="95"><span>%</span>
-</div>
-</div>
-
-<div class="control-group">
-<label>Maximum Word Spacing</label>
-<div class="input-suffix" id="ws-max-wrap">
-<input type="number" id="word-space-max" value="100"><span>%</span>
-</div>
-</div>
-</div>
-
-<!-- InDesign H&J Port Card -->
-<div class="gestalt-card">
-<h3 class="subsection-title">Hyphenation &amp; Language</h3>
-<div class="control-group" style="margin-bottom: 12px;">
-<label>Dictionary (Native HarfBuzz)</label>
-<select id="doc-lang">
-<option value="de" selected="">German</option>
-<option value="en">English (US/UK)</option>
-</select>
-</div>
-
-<div class="control-group checkbox-row" style="margin-bottom: 12px;">
-<input type="checkbox" id="hyph-enable" checked="">
-<label for="hyph-enable">Hyphenate</label>
-</div>
-
-<div class="control-grid">
-<div class="control-group"><label>Words with at Least:</label><div class="input-suffix"><input type="number" id="hyph-words" value="5"><span>letters</span></div></div>
-<div class="control-group"><label>After First:</label><div class="input-suffix"><input type="number" id="hyph-after" value="2"><span>letters</span></div></div>
-<div class="control-group"><label>Before Last:</label><div class="input-suffix"><input type="number" id="hyph-before" value="2"><span>letters</span></div></div>
-<div class="control-group"><label>Hyphen Limit:</label><div class="input-suffix"><input type="number" id="hyph-limit" value="3"><span>hyphens</span></div></div>
-<div class="control-group" style="grid-column: 1 / -1;"><label>Hyphenation Zone:</label><div class="input-suffix"><input type="text" id="hyph-zone" value="16 mm"></div></div>
-</div>
-
-<div class="control-group slider-group" style="margin: 16px 0;">
-<div class="slider-labels"><span>Better Spacing</span><span>Fewer Hyphens</span></div>
-<input type="range" min="1" max="10" value="5" class="slider" title="Algorithm Priority">
-</div>
-
-<div class="control-group checkbox-row"><input type="checkbox" id="hyph-cap" checked=""><label for="hyph-cap">Hyphenate Capitalized Words</label></div>
-<div class="control-group checkbox-row"><input type="checkbox" id="hyph-last" checked=""><label for="hyph-last">Hyphenate Last Word</label></div>
-<div class="control-group checkbox-row"><input type="checkbox" id="hyph-col" checked=""><label for="hyph-col">Hyphenate Across Column</label></div>
-</div>
-</div>
-</details>
-
-<!-- 3. Export -->
-<details class="accordion">
-<summary>3. Output <span class="arrow"></span></summary>
-<div class="accordion-content">
-<div class="gestalt-card">
-<div class="control-group">
-<label>Adobe PDF Preset</label>
-<select><option>[High Quality Print]</option><option>[Press Quality]</option></select>
-</div>
-<div class="control-group">
-<label>Compatibility</label>
-<select><option>PDF/X-4:2010 (Acrobat 7)</option></select>
-</div>
-<button id="btn-export" class="primary-btn">EXPORT</button>
-</div>
-</div>
-</details>
-</aside>
-
-<main id="workspace">
-<div id="canvas" style="transform: translate(calc(-50% - 93px), calc(-50% + 623px)) scale(0.65);">
-<div id="document-container" lang="de" class="facing-enabled show-guides show-baseline"><div class="page"><div class="page-content"></div><div class="grid-overlay"><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div></div><div class="page-number">1</div></div><div class="page"><div class="page-content"></div><div class="grid-overlay"><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div></div><div class="page-number">2</div></div><div class="page"><div class="page-content"><h1>Inhaltsverzeichnis</h1><ul style="--bullet-char: &quot;• &quot;; padding-left: 14pt;"><li>I. Warum Mietkampfgruppen?&nbsp;</li><li>II. Das ist eine Mietkampfgruppe und das will sie erreichen</li><li>III. So arbeitet die Mietkampfgruppe&nbsp;</li><li style="margin-left: 12pt;">Finanzen und rechtliche Rahmenbedingungen</li><li style="margin-left: 12pt;">Unterstützung und Mietkampfversammlung</li><li style="margin-left: 12pt;">Unabhängigkeit und Werte</li><li>IV. So startest du eine Mietkampfgruppe&nbsp;</li><li>V. Tipps und Hinweise für eure gemeinsame Arbeit&nbsp;</li><li style="margin-left: 12pt;">Vor dem Treffen:&nbsp;</li><li style="margin-left: 12pt;">Während des Treffens:&nbsp;</li><li style="margin-left: 12pt;">Grundsatz: Worauf zu achten ist</li><li style="margin-left: 12pt;">Weiterführende Ressourcen:</li><li>VI. Eskalationsstufen für den Mietkampf&nbsp;</li><li style="margin-left: 12pt;">Stufe 1 (Vorbereitung):&nbsp;</li><li style="margin-left: 12pt;">Stufe 2 (1. Woche):&nbsp;</li><li style="margin-left: 12pt;">Stufe 3 (3. Woche):&nbsp;</li><li style="margin-left: 12pt;">Stufe 4 (ab 5. Woche):&nbsp;</li><li style="margin-left: 12pt;">Stufe 5 (Nach Bedarf):&nbsp;</li><li style="margin-left: 12pt;">Stufe 6 (Nach Bedarf):&nbsp;</li><li style="margin-left: 12pt;">Stufe 7 (Nach Bedarf):&nbsp;</li><li>VII. Mögliche Aktionsformen&nbsp;</li><li style="margin-left: 12pt;">1. Schreiben mit Androhung von Öffentlichkeitsarbeit&nbsp;</li><li style="margin-left: 12pt;">2. Telefonkampagnen&nbsp;</li><li style="margin-left: 12pt;">3. Delegation&nbsp;</li></ul></div><div class="grid-overlay"><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div></div><div class="page-number">3</div></div><div class="page"><div class="page-content"><ul style="--bullet-char: &quot;• &quot;; padding-left: 14pt;"><li style="margin-left: 12pt;">4. Flyer verteilen&nbsp;</li><li style="margin-left: 12pt;">5. Pressekonferenz&nbsp;</li><li style="margin-left: 12pt;">6. Postkartenaktion&nbsp;</li><li style="margin-left: 12pt;">7. Banner-Aktion&nbsp;</li><li style="margin-left: 12pt;">8. Kundgebung&nbsp;</li><li style="margin-left: 12pt;">9. Besetzung von Büros&nbsp;</li><li style="margin-left: 12pt;">10. Mietkürzungen und Mietstreiks&nbsp;</li><li>VIII. Kontakt <br>bei Fragen&nbsp;</li></ul></div><div class="grid-overlay"><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div></div><div class="page-number">4</div></div><div class="page"><div class="page-content"><h1>I. Warum Mietkampfgruppen?&nbsp;</h1><p>Wir als Mietgewerkschaft wollen zusammen als Nachbarschaft im Stadtteil Strukturen entwickeln, mit denen wir in der Lage sind, gemeinsam gegen die alltäglichen Zumutungen der kapitalistischen Gesellschaft zu kämpfen. Wir verfolgen also nicht (nur) das Ziel, Einzelnen mit individuellen Problemen zu helfen. Stattdessen bieten wir Strukturen an, um sich an Mietkämpfen und Ähnlichem zu beteiligen.</p><p>Die Mietgewerkschaft Leipzig ist also vor allem darauf ausgelegt, Mietkämpfe und Anliegen von Mieter*innen zusammenzulegen und dann gemeinsam gegen die Ungerechtigkeiten vorzugehen. Wir wollen somit eine Plattform sein, über die sich Menschen kennenlernen und über die sie möglicherweise auch kommunizieren und sich im Kampf gegen Vermieter und Immobilienkonzerne verbünden können. Dafür schlagen wir als zentrales Organ der Mietgewerkschaft die Mietkampfgruppen vor. Was genau die Mietkampfgruppen sind und wie sie funktionieren, erfahrt ihr in dieser Broschüre.</p><h1>II. Das ist eine Mietkampfgruppe und das will sie erreichen</h1><p>In den Mietkampfgruppen finden sich Menschen zusammen, die sich entlang eines Mietstreits mit einer Hausverwaltung oder Eigentümer verbünden und gemeinsam dagegen vorgehen möchten. Das können also direkte Nachbar*innen sein, aber auch andere Menschen im Viertel, die die gleiche Hausverwaltung und/oder Eigentümer haben.</p></div><div class="grid-overlay"><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div></div><div class="page-number">5</div></div><div class="page"><div class="page-content"><p>Wenn du und deine direkten Nachbar*innen in deinem Haus also Probleme mit eurer Hausverwaltung und/oder eurer Eigentümer habt, könnt ihr euch als Hausgemeinschaft oder gemeinsam mit anderen Menschen, die die gleiche Hausverwaltung und/oder Eigentümer haben, in einer Mietkampfgruppe organisieren. So könnt ihr euch im Kampf gegen die Ungerechtigkeiten gegenseitig unterstützen und zusammen Strategien entwickeln. Wenn ihr dann Druck auf die Hausverwaltung und/oder Eigentümer aufbaut, hat das natürlich viel mehr Schlagkraft, als wenn ihr alleine dagegen ankämpft. Kurzgesagt: In den Mietkampfgruppen werden Anliegen und Mietkämpfe von Mieter*innen zusammengelegt und die Mietkämpfe durchgeführt.</p><p>Wichtig ist, dass die Mietkampfgruppen dabei auf Langfristigkeit ausgelegt sind und über ein bestimmtes Problem (wie zum Beispiel zu hohe Nebenkostenabrechnungen) hinaus existieren sollen. Es geht also nicht nur darum, sich im Kampf gegen Vermieter*innen zusammenzutun, sondern auch darum, die Nachbarschaftsgemeinschaft zu stärken. Die Mietkampfgruppen können also auch dazu da sein, sich gegenseitig als Nachbar*innen besser kennenzulernen und gemeinsam schöne Zeit zusammen zu verbringen! So kann im besten Fall das Gemeinschaftsgefühl gestärkt werden und ihr als Nachbar*innen könnt euch bei Bedarf über Mietangelegenheiten hinaus unterstützen.</p><h1>III. So arbeitet die Mietkampfgruppe&nbsp;</h1></div><div class="grid-overlay"><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div></div><div class="page-number">6</div></div><div class="page"><div class="page-content"><p>Die Mietkampfgruppe arbeitet grundlegend eigenständig. Sie kann sich zum Beispiel selbst aussuchen, wie oft sie sich trifft und wie ihre Treffen ablaufen. Sie ist allerdings dazu angehalten, sich im Sinne der Arbeitsweise und Grundsätze sowie den Prinzipien des Miteinanders der Mietgewerkschaft zu organisieren (basisdemokratische Organisierung, Langfristigkeit, realistische Einschätzung unserer Zeit, Flexibilität, Konfliktkultur, Offenheit, Feedbackkultur, Gemeinsame Ziele, mehr dazu in der Broschüre "Willkommen in der Mietgewerkschaft").</p><p>Die Mietkampfgruppe arbeitet nach dem Eskalationsstufenmodell. Was genau das heißt und was mögliche Aktionsformen für den Mietkampf sind, findet ihr in dieser Broschüre im entsprechenden Kapitel.</p><h2>Finanzen und rechtliche Rahmenbedingungen</h2><p>Wenn eine Mietkampfgruppe strafrechtlich relevante Aktionen plant, ist das mit der Vollversammlung abzusprechen. Die Mietkampfgruppen können Geld von der Mietgewerkschaft bekommen, wenn dies für bestimmte Aktionen wie zum Beispiel das Drucken von Flyern benötigt wird. Sollte das Geld zur Verfügung stehen, werden 50  pro Aktion (gedeckelt auf 250  pro Mietkampfgruppe im Jahr) vom Buchführungs- und Kassenmandat bewilligt, wenn die Aktion im Einklang mit dem Konzept der Mietgewerkschaft steht. Für Anträge über mehr Geld oder wenn das Mandat unsicher ist, ob die Aktion im Einklang mit dem Konzept steht, wird das Anliegen auf der Vollversammlung besprochen und im Wege des Mehrheitsentscheids entschieden.</p><h2>Unterstützung und Mietkampfversammlung</h2></div><div class="grid-overlay"><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div></div><div class="page-number">7</div></div><div class="page"><div class="page-content"><p>Zu Beginn können auch Leute, die in der Mietgewerkschaft aktiv sind, aber keine direkten Nachbar*innen sind, Teil einer Mietkampfgruppe werden, um sie beim Aufbau zu unterstützen. Die Mietkampfgruppe kann sich mit Fragen immer an die Gewerkschaft wenden. Es gibt außerdem ein Mietkampfmandat, also eine Person, die den Überblick über die laufenden Mietkämpfe und die Mietkampfversammlungen hat und die erste Ansprechperson für die Mietkampfgruppen ist.</p><p>Strategiefragen, Schwierigkeiten und Herausforderungen in der Mietkampfgruppe können bei der monatlichen Mietkampfversammlung besprochen werden. Alle Mietkampfgruppen sind verpflichtet, eine Person zu diesen Versammlungen zu schicken, die über den Gang des Mietkampfes berichtet. Die Versammlungen dauern maximal 1,5 Stunden, werden moderiert und protokolliert. Im Anschluss gibt es Raum für informellen Austausch bei Snacks und Getränken.</p><h2>Unabhängigkeit und Werte</h2><p>Als Mietgewerkschaft setzen wir auf unabhängige, außerparlamentarische Strukturen. Wir spielen nicht nach den Regeln politischer Parteien, um unbeeinflussbar und unkäuflich zu bleiben. Parteien sehen wir nicht als zuverlässige Verbündete an, da sie durch Sachzwänge nicht unabhängig handeln können. Wir arbeiten zudem nicht mit Gruppen zusammen, die grundlegend unseren emanzipatorischen Werten widersprechen. Diese Grundsätze gelten uneingeschränkt auch für alle Mietkampfgruppen.</p><h1>IV. So startest du eine Mietkampfgruppe&nbsp;</h1></div><div class="grid-overlay"><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div></div><div class="page-number">8</div></div><div class="page"><div class="page-content"><p>1. Ersten Kontakt knüpfen: 
-Nimm zuerst Kontakt zu deinen Nachbar*innen auf. Du kannst bei ihnen klingeln und sie fragen, wie es ihnen mit der Hausverwaltung und/oder den Eigentümern geht. Erstelle z. B. eine WhatsApp-Gruppe für den einfacheren Austausch. Ein QR-Code mit dem Einladungslink im Treppenhaus hilft, alle zu erreichen.</p><p>2. Erstes Treffen organisieren: 
-Lade zu einem unverbindlichen Kennenlernen ein das muss kein strukturiertes Treffen sein. Ein gemeinsames Grillen im Hof oder Waffelessen im Wohnzimmer bietet einen guten Rahmen, um über die Wohnsituation und die Idee der Mietgewerkschaft zu sprechen.</p><p>3. Offizielle Gründung: 
-Wenn ihr euch entscheidet, eine Mietkampfgruppe zu werden, schließt jeweils als Einzelpersonen eine Mitgliedschaft bei der Mietgewerkschaft ab und besucht die nächste Mietkampfversammlung. Dort stellt ihr euch und euer Anliegen vor. Damit seid ihr offiziell gegründet und Teil der Mietgewerkschaft. Neumitglieder sind zudem herzlich zur alle drei Monate stattfindenden Einführungsveranstaltung eingeladen.</p><h1>V. Tipps und Hinweise für eure gemeinsame Arbeit&nbsp;</h1><h2>Vor dem Treffen:&nbsp;</h2><p>• Termin &amp; Ort: Nutzt Termin-Abstimmungs-Tools in eurer Chatgruppe. Wählt zugängliche Orte wie Wohnzimmer, Gemeinschaftsräume oder den Hinterhof.</p><p>• Rollenverteilung: Legt vorab fest, wer das Treffen vorbereitet, wer moderiert und wer protokolliert.</p></div><div class="grid-overlay"><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div></div><div class="page-number">9</div></div><div class="page"><div class="page-content"><p>• Tagesordnung: Verschriftlicht eine Tagesordnung mit allen Sammelpunkten und plant bewusst Pausen ein.</p><h2>Während des Treffens:&nbsp;</h2><p>1. Ankommen &amp; Vorstellen: Kurze Runde zum Kennenlernen oder Abfragen des aktuellen Befindens.</p><p>2. Problemerfassung: Konkrete Themen sammeln, die euch als Nachbar*innen beschäftigen.</p><p>3. Strategieentwicklung: Gemeinsam passende Aktionsformen und Schritte diskutieren.</p><p>4. Aufgaben verteilen: Erstklassige Klarheit schaffen, wer welche Aufgaben bis zum nächsten Mal übernimmt.</p><p>5. Nächster Termin: Direkt den nächsten Termin sowie Moderation/Protokoll festlegen.</p><p>Tipp: Haltet Treffen zugänglich und angenehm durch Kinderbetreuung, Snacks oder ein getränk im Anschluss!</p><h2>Grundsatz: Worauf zu achten ist</h2><p>Ausgewogenheit: Achtet gemeinsam darauf, dass alle zu Wort kommen; ermutigt leise Personen.</p><p>Fokussierung: Verliert euch nicht in Diskussionen über Detailfragen einzelner Personen.</p><p>Kollektivität: Stellt sicher, dass Entscheidungen von der ganzen Gruppe getragen werden.</p></div><div class="grid-overlay"><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div></div><div class="page-number">10</div></div><div class="page"><div class="page-content"><h2>Weiterführende Ressourcen:</h2><p>• Organizing-Handbuch der Mieter*innengewerkschaft Madrid (S. 23 ff.)</p><p>• Organizing-Werkzeugkasten "Gute Treffen Wachsende Gruppen" der Bewegungsschule</p><h1>VI. Eskalationsstufen für den Mietkampf&nbsp;</h1><p>Wir arbeiten nach einem Eskalationsstufenmodell. Das bedeutet, dass wir an Hausverwaltungen und Eigentümer Forderungen stellen und mit unterschiedlichen Aktionsformen steigend mehr Druck aufbauen.</p><p>Wichtig: Vor Beginn müsst ihr klare, eindeutige Forderungen formulieren. Diese bilden die Basis und sollten während des Kampfes möglichst nicht stark verändert werden.</p><h2>Stufe 1 (Vorbereitung):&nbsp;</h2><p>Konkrete Forderungen formulieren, schriftlich festhalten und in der Gruppe beschließen.</p><h2>Stufe 2 (1. Woche):&nbsp;</h2><p>Höfliches Schreiben mit Fristsetzung im Namen der Mietkampfgruppe an die Vermietung senden.</p><h2>Stufe 3 (3. Woche):&nbsp;</h2></div><div class="grid-overlay"><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div></div><div class="page-number">11</div></div><div class="page"><div class="page-content"><p>Zweites Anschreiben mit juristischer Sprache &amp; Androhung von Öffentlichkeitsarbeit (oder Übergabe als Delegation).</p><h2>Stufe 4 (ab 5. Woche):&nbsp;</h2><p>Öffentliche Aktionen starten (Flyer, Postkarten, Telefonkampagne, Kundgebung, Banner).</p><h2>Stufe 5 (Nach Bedarf):&nbsp;</h2><p>Direktere Aktionsformen (Absprache mit dem Mietkampfmandat erforderlich).</p><h2>Stufe 6 (Nach Bedarf):&nbsp;</h2><p>Formelle Androhung einer Mietkürzung oder eines Mietstreiks.</p><h2>Stufe 7 (Nach Bedarf):&nbsp;</h2><p>Durchführung einer Mietkürzung oder eines Mietstreiks.</p><h1>VII. Mögliche Aktionsformen&nbsp;</h1><h2>1. Schreiben mit Androhung von Öffentlichkeitsarbeit&nbsp;</h2><p>Ein Brief an die Vermietung, der Forderungen erneut auflistet und ankündigt, diese öffentlichkeitswirksam durchzusetzen.</p></div><div class="grid-overlay"><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div></div><div class="page-number">12</div></div><div class="page"><div class="page-content"><p>• Sinnvoll wenn: Ihr am Anfang steht, Stärke zeigen und der Vermietung signalisieren wollt, dass eine Organisation hinter euch steht.</p><p>• Orga: 1-2 Personen setzen das Schreiben auf. Nach Zustimmung der Gruppe per Post senden oder als Delegation übergeben.</p><h2>2. Telefonkampagnen&nbsp;</h2><p>• Sinnvoll für: Schnelle Ergebnisse und die Demonstration breiter Unterstützung (1-2 Orga-Personen, 10-25 Anrufende).</p><p>• Durchführung: Erstellt ein Skript (2-4 Sätze, z. B. "Ich fordere, dass Sie mit den Mieter*innen verhandeln..."). Verbreitet die Telefonnummer und das Zeitfenster (morgens/mittags, 2-3 Std.) per SharePic oder Flyer. Bei Verweigerung können SMS gesendet werden.</p><h2>3. Delegation&nbsp;</h2><p>Eine Gruppe überbringt persönlich eine Botschaft im Büro oder an der Haustür der Vermietung (optimal: 7-12 Personen).</p><p>• Vorbereitung: Betroffene Mieter*innen sollten das Schreiben überreichen. Spielt mögliche Szenarien vorher durch (Wut, Verweis vom Grundstück, Spaltungsversuche). Tretet geschlossen und selbstbewusst auf. Bringt Schilder, Transparente und Flyer mit.</p><h2>4. Flyer verteilen&nbsp;</h2><p>• Sinnvoll für: Schnelle Aktionen in der Nachbarschaft (ca. 150 Kopien) oder als Begleitung von Kundgebungen und Delegationen (5-7 Personen zum Verteilen).</p></div><div class="grid-overlay"><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div></div><div class="page-number">13</div></div><div class="page"><div class="page-content"><p>• Wichtig: Alle Informationen strikt sachlich halten, um Verleumdungsklagen zu vermeiden. Bei Rechtsunsicherheiten Rücksprache mit der Mietkampfversammlung oder der "Gruppe für schnelle Entscheidungen" halten.</p><h2>5. Pressekonferenz&nbsp;</h2><p>• Sinnvoll bei: Aktionen oder Gerichtsterminen, um medialen Druck aufzubauen.</p><p>• Orga: Mehrere Redner*innen (max. 5 Min. pro Beitrag). Verfasst eine Pressemitteilung mit fetten Rahmendaten (mind. 48 Std. vorher versenden). Übt das Beantworten möglicher Fragen vorab.</p><h2>6. Postkartenaktion&nbsp;</h2><p>• Sinnvoll bei: Kleinere Vermieter*innen/Eigentümer.</p><p>• Durchführung: Eindringliche Motive (z. B. Fotos von Mängeln) wählen. Postkarten von vielen Unterstützer*innen unterschreiben lassen und gestaffelt versenden, damit täglich neue Post beim Vermieter eingeht.</p><h2>7. Banner-Aktion&nbsp;</h2><p>• Sinnvoll für: Kundgebungen, Demos oder direkte Sichtbarkeit am Gebäude.</p><p>• Durchführung: Prägnanten Spruch entwerfen, Digitaldesign mittels Beamer auf Leinwand übertragen und ausmalen. Am oberen Rand Ösen/Seile anbringen, unten Beschwerung (z. B. Stöcke/Sandsäcke) befestigen.</p><h2>8. Kundgebung&nbsp;</h2></div><div class="grid-overlay"><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div></div><div class="page-number">14</div></div><div class="page"><div class="page-content"><p>• Sinnvoll bei: Verweigerung der Vermietung, um Aufmerksamkeit und Geschlossenheit zu zeigen.</p><p>• Orga: 1-2 Wochen Vorlauf, 3-5 Orga-Personen. Kundgebung mindestens 48 Stunden vorher bei der Versammlungsbehörde anmelden (in Leipzig online möglich). Versammlungsleitung und Motto benennen.</p><h2>9. Besetzung von Büros&nbsp;</h2><p>Belagerung der Räumlichkeiten der Hausverwaltung/Vermietung bis zur Verhandlungsbereitschaft. Beratung zu historischen Beispielen und Vorgehen erfolgt über das Mietkampfmandat.</p><h2>10. Mietkürzungen und Mietstreiks&nbsp;</h2><p>Die zeitweise Einbehaltung von Teilen oder der gesamten Miete.</p><p>• Voraussetzungen: Hoher Organisationsgrad unter den Mieter*innen, Verhandlungsverweigerung der Gegenseite, hohe Risikobereitschaft aller Beteiligten.</p><p>• Mögliche Konsequenzen: Bei Rückständen von zwei Monatsmieten droht die fristlose Kündigung und Räumungsklage. Eine Kündigung ist jedoch unwirksam, wenn Mietmängel vorliegen oder die Miete innerhalb von 2 Monaten nach Klageerhebung nachgezahlt wird.</p><p>• Durchführung: Ausführliche Beratung auf der Mietkampfversammlung, Vorankündigung von 2 Wochen an den Vermieter, begleitende intensive Öffentlichkeitsarbeit.</p><h1>VIII. Kontakt 
-bei Fragen&nbsp;</h1></div><div class="grid-overlay"><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div></div><div class="page-number">15</div></div><div class="page"><div class="page-content"><p>Bei allen allgemeinen und internen Fragen wendet euch an die zentrale Kontaktstelle:</p><p>• E-Mail Kontaktstelle: kontaktstelle_mietgew_le@systemli.org</p><p>Bei spezifischen Anliegen zu Mietkämpfen, Strategien und Eskalationsstufen ist das Mietkampfmandat eure erste Ansprechperson.</p></div><div class="grid-overlay"><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div></div><div class="page-number">16</div></div></div>
-</div>
-</main>
-
-<!-- PIP Text Editor -->
-<aside id="pip-editor" class="open active">
-<header>
-<h2>Text &amp; Style Editor</h2>
-<span>Click outside to close</span>
-</header>
-<div id="pip-toolbar">
-<button class="pip-btn" data-tag="H1">H1</button>
-<button class="pip-btn" data-tag="H2">H2</button>
-<button class="pip-btn" data-tag="H3">H3</button>
-<button class="pip-btn" data-tag="P">Body</button>
-<button class="pip-btn" data-tag="UL">List</button>
-<div style="width: 1px; background: #555; margin: 0 4px;"></div>
-<button class="pip-btn" id="btn-page-break" title="Force text to next page">Page Break</button>
-<button class="pip-btn" id="btn-save-text" title="Download text as .html to save formatting" style="margin-left: auto; background-color: var(--primary-blue);">↓ Save</button>
-</div>
-<div id="pip-content" contenteditable="true" spellcheck="false"><h1>I. Warum Mietkampfgruppen?&nbsp;</h1><p>Wir als Mietgewerkschaft wollen zusammen als Nachbarschaft im Stadtteil Strukturen entwickeln, mit denen wir in der Lage sind, gemeinsam gegen die alltäglichen Zumutungen der kapitalistischen Gesellschaft zu kämpfen. Wir verfolgen also nicht (nur) das Ziel, Einzelnen mit individuellen Problemen zu helfen. Stattdessen bieten wir Strukturen an, um sich an Mietkämpfen und Ähnlichem zu beteiligen.</p><p>Die Mietgewerkschaft Leipzig ist also vor allem darauf ausgelegt, Mietkämpfe und Anliegen von Mieter*innen zusammenzulegen und dann gemeinsam gegen die Ungerechtigkeiten vorzugehen. Wir wollen somit eine Plattform sein, über die sich Menschen kennenlernen und über die sie möglicherweise auch kommunizieren und sich im Kampf gegen Vermieter und Immobilienkonzerne verbünden können. Dafür schlagen wir als zentrales Organ der Mietgewerkschaft die Mietkampfgruppen vor. Was genau die Mietkampfgruppen sind und wie sie funktionieren, erfahrt ihr in dieser Broschüre.</p><h1>II. Das ist eine Mietkampfgruppe und das will sie erreichen</h1><p>In den Mietkampfgruppen finden sich Menschen zusammen, die sich entlang eines Mietstreits mit einer Hausverwaltung oder Eigentümer verbünden und gemeinsam dagegen vorgehen möchten. Das können also direkte Nachbar*innen sein, aber auch andere Menschen im Viertel, die die gleiche Hausverwaltung und/oder Eigentümer haben.</p><p>Wenn du und deine direkten Nachbar*innen in deinem Haus also Probleme mit eurer Hausverwaltung und/oder eurer Eigentümer habt, könnt ihr euch als Hausgemeinschaft oder gemeinsam mit anderen Menschen, die die gleiche Hausverwaltung und/oder Eigentümer haben, in einer Mietkampfgruppe organisieren. So könnt ihr euch im Kampf gegen die Ungerechtigkeiten gegenseitig unterstützen und zusammen Strategien entwickeln. Wenn ihr dann Druck auf die Hausverwaltung und/oder Eigentümer aufbaut, hat das natürlich viel mehr Schlagkraft, als wenn ihr alleine dagegen ankämpft. Kurzgesagt: In den Mietkampfgruppen werden Anliegen und Mietkämpfe von Mieter*innen zusammengelegt und die Mietkämpfe durchgeführt.</p><p>Wichtig ist, dass die Mietkampfgruppen dabei auf Langfristigkeit ausgelegt sind und über ein bestimmtes Problem (wie zum Beispiel zu hohe Nebenkostenabrechnungen) hinaus existieren sollen. Es geht also nicht nur darum, sich im Kampf gegen Vermieter*innen zusammenzutun, sondern auch darum, die Nachbarschaftsgemeinschaft zu stärken. Die Mietkampfgruppen können also auch dazu da sein, sich gegenseitig als Nachbar*innen besser kennenzulernen und gemeinsam schöne Zeit zusammen zu verbringen! So kann im besten Fall das Gemeinschaftsgefühl gestärkt werden und ihr als Nachbar*innen könnt euch bei Bedarf über Mietangelegenheiten hinaus unterstützen.</p><hr id="null"><h1>III. So arbeitet die Mietkampfgruppe&nbsp;</h1><p>Die Mietkampfgruppe arbeitet grundlegend eigenständig. Sie kann sich zum Beispiel selbst aussuchen, wie oft sie sich trifft und wie ihre Treffen ablaufen. Sie ist allerdings dazu angehalten, sich im Sinne der Arbeitsweise und Grundsätze sowie den Prinzipien des Miteinanders der Mietgewerkschaft zu organisieren (basisdemokratische Organisierung, Langfristigkeit, realistische Einschätzung unserer Zeit, Flexibilität, Konfliktkultur, Offenheit, Feedbackkultur, Gemeinsame Ziele, mehr dazu in der Broschüre "Willkommen in der Mietgewerkschaft").</p><p>Die Mietkampfgruppe arbeitet nach dem Eskalationsstufenmodell. Was genau das heißt und was mögliche Aktionsformen für den Mietkampf sind, findet ihr in dieser Broschüre im entsprechenden Kapitel.</p><h2>Finanzen und rechtliche Rahmenbedingungen</h2><p>Wenn eine Mietkampfgruppe strafrechtlich relevante Aktionen plant, ist das mit der Vollversammlung abzusprechen. Die Mietkampfgruppen können Geld von der Mietgewerkschaft bekommen, wenn dies für bestimmte Aktionen wie zum Beispiel das Drucken von Flyern benötigt wird. Sollte das Geld zur Verfügung stehen, werden 50  pro Aktion (gedeckelt auf 250  pro Mietkampfgruppe im Jahr) vom Buchführungs- und Kassenmandat bewilligt, wenn die Aktion im Einklang mit dem Konzept der Mietgewerkschaft steht. Für Anträge über mehr Geld oder wenn das Mandat unsicher ist, ob die Aktion im Einklang mit dem Konzept steht, wird das Anliegen auf der Vollversammlung besprochen und im Wege des Mehrheitsentscheids entschieden.</p><h2>Unterstützung und Mietkampfversammlung</h2><p>Zu Beginn können auch Leute, die in der Mietgewerkschaft aktiv sind, aber keine direkten Nachbar*innen sind, Teil einer Mietkampfgruppe werden, um sie beim Aufbau zu unterstützen. Die Mietkampfgruppe kann sich mit Fragen immer an die Gewerkschaft wenden. Es gibt außerdem ein Mietkampfmandat, also eine Person, die den Überblick über die laufenden Mietkämpfe und die Mietkampfversammlungen hat und die erste Ansprechperson für die Mietkampfgruppen ist.</p><p>Strategiefragen, Schwierigkeiten und Herausforderungen in der Mietkampfgruppe können bei der monatlichen Mietkampfversammlung besprochen werden. Alle Mietkampfgruppen sind verpflichtet, eine Person zu diesen Versammlungen zu schicken, die über den Gang des Mietkampfes berichtet. Die Versammlungen dauern maximal 1,5 Stunden, werden moderiert und protokolliert. Im Anschluss gibt es Raum für informellen Austausch bei Snacks und Getränken.</p><h2>Unabhängigkeit und Werte</h2><p>Als Mietgewerkschaft setzen wir auf unabhängige, außerparlamentarische Strukturen. Wir spielen nicht nach den Regeln politischer Parteien, um unbeeinflussbar und unkäuflich zu bleiben. Parteien sehen wir nicht als zuverlässige Verbündete an, da sie durch Sachzwänge nicht unabhängig handeln können. Wir arbeiten zudem nicht mit Gruppen zusammen, die grundlegend unseren emanzipatorischen Werten widersprechen. Diese Grundsätze gelten uneingeschränkt auch für alle Mietkampfgruppen.</p><h1>IV. So startest du eine Mietkampfgruppe&nbsp;</h1><p>1. Ersten Kontakt knüpfen: 
-Nimm zuerst Kontakt zu deinen Nachbar*innen auf. Du kannst bei ihnen klingeln und sie fragen, wie es ihnen mit der Hausverwaltung und/oder den Eigentümern geht. Erstelle z. B. eine WhatsApp-Gruppe für den einfacheren Austausch. Ein QR-Code mit dem Einladungslink im Treppenhaus hilft, alle zu erreichen.</p><p>2. Erstes Treffen organisieren: 
-Lade zu einem unverbindlichen Kennenlernen ein das muss kein strukturiertes Treffen sein. Ein gemeinsames Grillen im Hof oder Waffelessen im Wohnzimmer bietet einen guten Rahmen, um über die Wohnsituation und die Idee der Mietgewerkschaft zu sprechen.</p><p>3. Offizielle Gründung: 
-Wenn ihr euch entscheidet, eine Mietkampfgruppe zu werden, schließt jeweils als Einzelpersonen eine Mitgliedschaft bei der Mietgewerkschaft ab und besucht die nächste Mietkampfversammlung. Dort stellt ihr euch und euer Anliegen vor. Damit seid ihr offiziell gegründet und Teil der Mietgewerkschaft. Neumitglieder sind zudem herzlich zur alle drei Monate stattfindenden Einführungsveranstaltung eingeladen.</p><h1>V. Tipps und Hinweise für eure gemeinsame Arbeit&nbsp;</h1><h2>Vor dem Treffen:&nbsp;</h2><p>• Termin &amp; Ort: Nutzt Termin-Abstimmungs-Tools in eurer Chatgruppe. Wählt zugängliche Orte wie Wohnzimmer, Gemeinschaftsräume oder den Hinterhof.</p><p>• Rollenverteilung: Legt vorab fest, wer das Treffen vorbereitet, wer moderiert und wer protokolliert.</p><p>• Tagesordnung: Verschriftlicht eine Tagesordnung mit allen Sammelpunkten und plant bewusst Pausen ein.</p><h2>Während des Treffens:&nbsp;</h2><p>1. Ankommen &amp; Vorstellen: Kurze Runde zum Kennenlernen oder Abfragen des aktuellen Befindens.</p><p>2. Problemerfassung: Konkrete Themen sammeln, die euch als Nachbar*innen beschäftigen.</p><p>3. Strategieentwicklung: Gemeinsam passende Aktionsformen und Schritte diskutieren.</p><p>4. Aufgaben verteilen: Erstklassige Klarheit schaffen, wer welche Aufgaben bis zum nächsten Mal übernimmt.</p><p>5. Nächster Termin: Direkt den nächsten Termin sowie Moderation/Protokoll festlegen.</p><p>Tipp: Haltet Treffen zugänglich und angenehm durch Kinderbetreuung, Snacks oder ein getränk im Anschluss!</p><h2>Grundsatz: Worauf zu achten ist</h2><p>Ausgewogenheit: Achtet gemeinsam darauf, dass alle zu Wort kommen; ermutigt leise Personen.</p><p>Fokussierung: Verliert euch nicht in Diskussionen über Detailfragen einzelner Personen.</p><p>Kollektivität: Stellt sicher, dass Entscheidungen von der ganzen Gruppe getragen werden.</p><h2>Weiterführende Ressourcen:</h2><p>• Organizing-Handbuch der Mieter*innengewerkschaft Madrid (S. 23 ff.)</p><p>• Organizing-Werkzeugkasten "Gute Treffen Wachsende Gruppen" der Bewegungsschule</p><h1>VI. Eskalationsstufen für den Mietkampf&nbsp;</h1><p>Wir arbeiten nach einem Eskalationsstufenmodell. Das bedeutet, dass wir an Hausverwaltungen und Eigentümer Forderungen stellen und mit unterschiedlichen Aktionsformen steigend mehr Druck aufbauen.</p><p>Wichtig: Vor Beginn müsst ihr klare, eindeutige Forderungen formulieren. Diese bilden die Basis und sollten während des Kampfes möglichst nicht stark verändert werden.</p><h2>Stufe 1 (Vorbereitung):&nbsp;</h2><p>Konkrete Forderungen formulieren, schriftlich festhalten und in der Gruppe beschließen.</p><h2>Stufe 2 (1. Woche):&nbsp;</h2><p>Höfliches Schreiben mit Fristsetzung im Namen der Mietkampfgruppe an die Vermietung senden.</p><h2>Stufe 3 (3. Woche):&nbsp;</h2><p>Zweites Anschreiben mit juristischer Sprache &amp; Androhung von Öffentlichkeitsarbeit (oder Übergabe als Delegation).</p><h2>Stufe 4 (ab 5. Woche):&nbsp;</h2><p>Öffentliche Aktionen starten (Flyer, Postkarten, Telefonkampagne, Kundgebung, Banner).</p><h2>Stufe 5 (Nach Bedarf):&nbsp;</h2><p>Direktere Aktionsformen (Absprache mit dem Mietkampfmandat erforderlich).</p><h2>Stufe 6 (Nach Bedarf):&nbsp;</h2><p>Formelle Androhung einer Mietkürzung oder eines Mietstreiks.</p><h2>Stufe 7 (Nach Bedarf):&nbsp;</h2><p>Durchführung einer Mietkürzung oder eines Mietstreiks.</p><h1>VII. Mögliche Aktionsformen&nbsp;</h1><h2>1. Schreiben mit Androhung von Öffentlichkeitsarbeit&nbsp;</h2><p>Ein Brief an die Vermietung, der Forderungen erneut auflistet und ankündigt, diese öffentlichkeitswirksam durchzusetzen.</p><p>• Sinnvoll wenn: Ihr am Anfang steht, Stärke zeigen und der Vermietung signalisieren wollt, dass eine Organisation hinter euch steht.</p><p>• Orga: 1-2 Personen setzen das Schreiben auf. Nach Zustimmung der Gruppe per Post senden oder als Delegation übergeben.</p><h2>2. Telefonkampagnen&nbsp;</h2><p>• Sinnvoll für: Schnelle Ergebnisse und die Demonstration breiter Unterstützung (1-2 Orga-Personen, 10-25 Anrufende).</p><p>• Durchführung: Erstellt ein Skript (2-4 Sätze, z. B. "Ich fordere, dass Sie mit den Mieter*innen verhandeln..."). Verbreitet die Telefonnummer und das Zeitfenster (morgens/mittags, 2-3 Std.) per SharePic oder Flyer. Bei Verweigerung können SMS gesendet werden.</p><h2>3. Delegation&nbsp;</h2><p>Eine Gruppe überbringt persönlich eine Botschaft im Büro oder an der Haustür der Vermietung (optimal: 7-12 Personen).</p><p>• Vorbereitung: Betroffene Mieter*innen sollten das Schreiben überreichen. Spielt mögliche Szenarien vorher durch (Wut, Verweis vom Grundstück, Spaltungsversuche). Tretet geschlossen und selbstbewusst auf. Bringt Schilder, Transparente und Flyer mit.</p><h2>4. Flyer verteilen&nbsp;</h2><p>• Sinnvoll für: Schnelle Aktionen in der Nachbarschaft (ca. 150 Kopien) oder als Begleitung von Kundgebungen und Delegationen (5-7 Personen zum Verteilen).</p><p>• Wichtig: Alle Informationen strikt sachlich halten, um Verleumdungsklagen zu vermeiden. Bei Rechtsunsicherheiten Rücksprache mit der Mietkampfversammlung oder der "Gruppe für schnelle Entscheidungen" halten.</p><h2>5. Pressekonferenz&nbsp;</h2><p>• Sinnvoll bei: Aktionen oder Gerichtsterminen, um medialen Druck aufzubauen.</p><p>• Orga: Mehrere Redner*innen (max. 5 Min. pro Beitrag). Verfasst eine Pressemitteilung mit fetten Rahmendaten (mind. 48 Std. vorher versenden). Übt das Beantworten möglicher Fragen vorab.</p><h2>6. Postkartenaktion&nbsp;</h2><p>• Sinnvoll bei: Kleinere Vermieter*innen/Eigentümer.</p><p>• Durchführung: Eindringliche Motive (z. B. Fotos von Mängeln) wählen. Postkarten von vielen Unterstützer*innen unterschreiben lassen und gestaffelt versenden, damit täglich neue Post beim Vermieter eingeht.</p><h2>7. Banner-Aktion&nbsp;</h2><p>• Sinnvoll für: Kundgebungen, Demos oder direkte Sichtbarkeit am Gebäude.</p><p>• Durchführung: Prägnanten Spruch entwerfen, Digitaldesign mittels Beamer auf Leinwand übertragen und ausmalen. Am oberen Rand Ösen/Seile anbringen, unten Beschwerung (z. B. Stöcke/Sandsäcke) befestigen.</p><h2>8. Kundgebung&nbsp;</h2><p>• Sinnvoll bei: Verweigerung der Vermietung, um Aufmerksamkeit und Geschlossenheit zu zeigen.</p><p>• Orga: 1-2 Wochen Vorlauf, 3-5 Orga-Personen. Kundgebung mindestens 48 Stunden vorher bei der Versammlungsbehörde anmelden (in Leipzig online möglich). Versammlungsleitung und Motto benennen.</p><h2>9. Besetzung von Büros&nbsp;</h2><p>Belagerung der Räumlichkeiten der Hausverwaltung/Vermietung bis zur Verhandlungsbereitschaft. Beratung zu historischen Beispielen und Vorgehen erfolgt über das Mietkampfmandat.</p><h2>10. Mietkürzungen und Mietstreiks&nbsp;</h2><p>Die zeitweise Einbehaltung von Teilen oder der gesamten Miete.</p><p>• Voraussetzungen: Hoher Organisationsgrad unter den Mieter*innen, Verhandlungsverweigerung der Gegenseite, hohe Risikobereitschaft aller Beteiligten.</p><p>• Mögliche Konsequenzen: Bei Rückständen von zwei Monatsmieten droht die fristlose Kündigung und Räumungsklage. Eine Kündigung ist jedoch unwirksam, wenn Mietmängel vorliegen oder die Miete innerhalb von 2 Monaten nach Klageerhebung nachgezahlt wird.</p><p>• Durchführung: Ausführliche Beratung auf der Mietkampfversammlung, Vorankündigung von 2 Wochen an den Vermieter, begleitende intensive Öffentlichkeitsarbeit.</p><h1>VIII. Kontakt 
-bei Fragen&nbsp;</h1><p>Bei allen allgemeinen und internen Fragen wendet euch an die zentrale Kontaktstelle:</p><p>• E-Mail Kontaktstelle: kontaktstelle_mietgew_le@systemli.org</p><p>Bei spezifischen Anliegen zu Mietkämpfen, Strategien und Eskalationsstufen ist das Mietkampfmandat eure erste Ansprechperson.</p></div>
-</aside>
-
-<script>
-class TypesettingEngine {
-constructor() {
-this.workspace = document.getElementById('workspace');
-this.canvas = document.getElementById('canvas');
-this.docContainer = document.getElementById('document-container');
-
-// Workspace State - Centered Initialization
-this.scale = 0.8;
-this.translateX = 0;
-this.translateY = 0;
-this.isPanning = false;
-this.startX = 0;
-this.startY = 0;
-
-// Document Data
-this.tocTextBlocks = [];
-this.bodyTextBlocks = [];
-
-// Pre-formatted HTML Seed
-this.rawBodyHTML = `
+                // Document Data
+                this.tocTextBlocks = [];
+                this.bodyTextBlocks = [];
+                
+                // Pre-formatted HTML Seed
+                this.rawBodyHTML = `
 <h1>Inhalte und Ideen für deine Mietkampfgruppe</h1>
 <p>Ein Leitfaden der Mietgewerkschaft Leipzig für gemeinsame Kämpfe im Stadtteil</p>
 <h2>Inhaltsverzeichnis</h2>
@@ -1069,843 +1080,958 @@ this.rawBodyHTML = `
 <h2>I. Warum Mietkampfgruppen?</h2>
 <p>Wir als Mietgewerkschaft wollen zusammen als Nachbarschaft im Stadtteil Strukturen entwickeln, mit denen wir in der Lage sind, gemeinsam gegen die alltäglichen Zumutungen der kapitalistischen Gesellschaft zu kämpfen. Wir verfolgen also nicht (nur) das Ziel, Einzelnen mit individuellen Problemen zu helfen. Stattdessen bieten wir Strukturen an, um sich an Mietkämpfen und Ähnlichem zu beteiligen.</p>
 <p>Die Mietgewerkschaft Leipzig ist also vor allem darauf ausgelegt, Mietkämpfe und Anliegen von Mieter*innen zusammenzulegen und dann gemeinsam gegen die Ungerechtigkeiten vorzugehen. Wir wollen somit eine Plattform sein, über die sich Menschen kennenlernen und über die sie möglicherweise auch kommunizieren und sich im Kampf gegen Vermieter und Immobilienkonzerne verbünden können. Dafür schlagen wir als zentrales Organ der Mietgewerkschaft die Mietkampfgruppen vor. Was genau die Mietkampfgruppen sind und wie sie funktionieren, erfahrt ihr in dieser Broschüre.</p>
-               `;
+                `;
 
-this.pipPanel = document.getElementById('pip-editor');
-this.pipContent = document.getElementById('pip-content');
+                this.pipPanel = document.getElementById('pip-editor');
+                this.pipContent = document.getElementById('pip-content');
+                
+                this.initWorkspace();
+                this.initUIListeners();
+                this.initTextUploader();
+                this.initCustomStyles();
+                this.initPIPEditor();
+                this.initPreflight();
+                
+                const cachedText = localStorage.getItem('typesetting-pip-cache');
+                if (cachedText) {
+                    this.pipContent.innerHTML = cachedText;
+                } else {
+                    this.pipContent.innerHTML = this.rawBodyHTML;
+                }
+                
+                this.updateFromPIP();
+            }
 
-this.initWorkspace();
-this.initUIListeners();
-this.initTextUploader();
-this.initCustomStyles();
-this.initPIPEditor();
-this.initUnfoldButton();
+            initWorkspace() {
+                this.updateCanvasTransform();
+                
+                window.addEventListener('keydown', (e) => {
+                    if (e.key.toLowerCase() === 'w' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'SELECT') {
+                        const cb = document.getElementById('show-extras');
+                        cb.checked = !cb.checked;
+                        cb.dispatchEvent(new Event('change'));
+                    }
+                });
 
-// Set default print geometry immediately
-this.updatePrintStyle('148mm', '210mm');
+                this.workspace.addEventListener('mousedown', (e) => {
+                    this.isPanning = true;
+                    this.startX = e.clientX - this.translateX;
+                    this.startY = e.clientY - this.translateY;
+                });
+                window.addEventListener('mouseup', () => this.isPanning = false);
+                window.addEventListener('mousemove', (e) => {
+                    if (!this.isPanning) return;
+                    this.translateX = e.clientX - this.startX;
+                    this.translateY = e.clientY - this.startY;
+                    this.updateCanvasTransform();
+                });
+                
+                // Advanced Zoom-to-Pointer Math
+                this.workspace.addEventListener('wheel', (e) => {
+                    e.preventDefault();
+                    if (e.ctrlKey || e.metaKey) {
+                        const rect = this.workspace.getBoundingClientRect();
+                        const mouseX = e.clientX - rect.left - rect.width / 2;
+                        const mouseY = e.clientY - rect.top - rect.height / 2;
 
-const cachedText = localStorage.getItem('typesetting-pip-cache');
-if (cachedText) {
-this.pipContent.innerHTML = cachedText;
-} else {
-this.pipContent.innerHTML = this.rawBodyHTML;
-}
-
-this.updateFromPIP();
-}
-
-initWorkspace() {
-this.updateCanvasTransform();
-
-window.addEventListener('keydown', (e) => {
-if (e.key.toLowerCase() === 'w' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'SELECT') {
-const cb = document.getElementById('show-extras');
-cb.checked = !cb.checked;
-cb.dispatchEvent(new Event('change'));
-}
-});
-
-this.workspace.addEventListener('mousedown', (e) => {
-this.isPanning = true;
-this.startX = e.clientX - this.translateX;
-this.startY = e.clientY - this.translateY;
-});
-window.addEventListener('mouseup', () => this.isPanning = false);
-window.addEventListener('mousemove', (e) => {
-if (!this.isPanning) return;
-this.translateX = e.clientX - this.startX;
-this.translateY = e.clientY - this.startY;
-this.updateCanvasTransform();
-});
-this.workspace.addEventListener('wheel', (e) => {
-e.preventDefault();
-if (e.ctrlKey || e.metaKey) {
-const zoomFactor = 0.05;
-const oldScale = this.scale;
-this.scale += (e.deltaY < 0 ? 1 : -1) * zoomFactor;
-this.scale = Math.max(0.1, Math.min(this.scale, 5));
-
-// Precise Zoom-to-Pointer Math
-const rect = this.workspace.getBoundingClientRect();
-const mouseX = e.clientX - rect.left;
-const mouseY = e.clientY - rect.top;
-
-const cx = rect.width / 2;
-const cy = rect.height / 2;
-
-const offsetX = mouseX - (cx + this.translateX);
-const offsetY = mouseY - (cy + this.translateY);
-
-const ratio = this.scale / oldScale;
-this.translateX -= offsetX * (ratio - 1);
-this.translateY -= offsetY * (ratio - 1);
-} else {
-this.translateX -= e.deltaX;
-this.translateY -= e.deltaY;
-}
-this.updateCanvasTransform();
-}, { passive: false });
-}
+                        const zoomFactor = 0.05;
+                        const direction = e.deltaY < 0 ? 1 : -1;
+                        const newScale = Math.max(0.1, Math.min(this.scale + direction * zoomFactor, 5));
+                        
+                        const scaleRatio = newScale / this.scale;
+                        this.translateX = mouseX - (mouseX - this.translateX) * scaleRatio;
+                        this.translateY = mouseY - (mouseY - this.translateY) * scaleRatio;
+                        
+                        this.scale = newScale;
+                    } else {
+                        this.translateX -= e.deltaX;
+                        this.translateY -= e.deltaY;
+                    }
+                    this.updateCanvasTransform();
+                }, { passive: false });
+                
+                // UNFOLD Button Setup
+                const unfoldBtn = document.getElementById('unfold-btn');
+                const tooltip = document.getElementById('unfold-tooltip');
+                unfoldBtn.addEventListener('mouseenter', () => {
+                    unfoldBtn.style.color = 'rgb(0,0,255)';
+                    tooltip.style.display = 'block';
+                });
+                unfoldBtn.addEventListener('mouseleave', () => {
+                    unfoldBtn.style.color = '#555';
+                    tooltip.style.display = 'none';
+                });
+                unfoldBtn.addEventListener('mousemove', (e) => {
+                    tooltip.style.left = (e.clientX - 110) + 'px';
+                    tooltip.style.top = (e.clientY + 20) + 'px';
+                });
+                unfoldBtn.addEventListener('click', () => {
+                    this.pipPanel.classList.add('open');
+                });
+            }
 
             updateCanvasTransform() {
-updateCanvasTransform() {
-this.canvas.style.transform = `translate(calc(-50% + ${this.translateX}px), calc(-50% + ${this.translateY}px)) scale(${this.scale})`;
-}
-
-initUnfoldButton() {
-const btn = document.getElementById('unfold-btn');
-const tooltip = document.getElementById('unfold-tooltip');
-
-btn.addEventListener('mousemove', (e) => {
-tooltip.classList.add('visible');
-tooltip.style.left = (e.clientX + 15) + 'px';
-tooltip.style.top = (e.clientY + 15) + 'px';
-});
-
-btn.addEventListener('mouseleave', () => {
-tooltip.classList.remove('visible');
-});
-
-btn.addEventListener('click', () => {
-this.pipPanel.classList.add('open');
-this.pipPanel.classList.add('active');
-});
-}
-
-initPIPEditor() {
-document.execCommand('defaultParagraphSeparator', false, 'p');
-
-document.querySelectorAll('.pip-btn').forEach(btn => {
-btn.addEventListener('mousedown', e => e.preventDefault());
-btn.addEventListener('click', () => {
-const tag = btn.dataset.tag;
-if (tag === 'UL') {
-document.execCommand('insertUnorderedList', false, null);
-} else {
-document.execCommand('formatBlock', false, tag);
-}
-this.updateFromPIP();
-});
-});
-
-document.getElementById('btn-page-break').addEventListener('click', () => {
-document.execCommand('insertHorizontalRule', false, null);
-this.updateFromPIP();
-});
-
-document.getElementById('btn-save-text').addEventListener('click', () => {
-const blob = new Blob([this.pipContent.innerHTML], { type: 'text/html' });
-const url = URL.createObjectURL(blob);
-const a = document.createElement('a');
-a.href = url;
-a.download = 'typesetting-backup.html';
-a.click();
-URL.revokeObjectURL(url);
-});
-
-window.addEventListener('keydown', (e) => {
-const activeTag = document.activeElement.tagName;
-const isInput = activeTag === 'INPUT' || activeTag === 'SELECT' || document.activeElement.isContentEditable;
-
-if (e.key.toLowerCase() === 't' && !isInput) {
-e.preventDefault();
-this.pipPanel.classList.add('open');
-}
-});
-
-this.pipPanel.addEventListener('mousedown', () => {
-if (!this.pipPanel.classList.contains('active')) {
-this.pipPanel.classList.add('active');
-}
-});
-
-document.addEventListener('mousedown', (e) => {
-if (this.pipPanel.classList.contains('open') && !this.pipPanel.contains(e.target)) {
-this.pipPanel.classList.remove('open');
-this.pipPanel.classList.remove('active');
-}
-});
-
-window.addEventListener('keydown', (e) => {
-if (e.key === 'Escape' && this.pipPanel.classList.contains('open')) {
-this.pipPanel.classList.remove('open');
-this.pipPanel.classList.remove('active');
-this.workspace.focus();
-}
-});
-
-let timeout = null;
-this.pipContent.addEventListener('input', () => {
-clearTimeout(timeout);
-timeout = setTimeout(() => {
-this.updateFromPIP();
-}, 400);
-});
-}
-
-updateFromPIP() {
-const html = this.pipContent.innerHTML;
-localStorage.setItem('typesetting-pip-cache', html);
-this.parseHTMLToBlocks(html, 'body');
-}
-
-parseHTMLToBlocks(html, type) {
-const temp = document.createElement('div');
-temp.innerHTML = html;
-
-let blocks = [];
-temp.childNodes.forEach(node => {
-if (node.nodeType === 1) {
-blocks.push(node.cloneNode(true));
-} else if (node.nodeType === 3 && node.textContent.trim()) {
-const p = document.createElement('p');
-p.textContent = node.textContent;
-blocks.push(p);
-}
-});
-
-if (type === 'toc') {
-this.tocTextBlocks = blocks;
-this.queueReflow();
-}
-
-if (type === 'body') {
-this.bodyTextBlocks = blocks;
-this.generateTOC(); 
-}
-}
-
-initUIListeners() {
-document.getElementById('doc-layout').addEventListener('change', (e) => {
-if (e.target.value === 'facing') {
-this.docContainer.classList.add('facing-enabled');
-this.docContainer.classList.remove('facing-disabled');
-} else {
-this.docContainer.classList.remove('facing-enabled');
-this.docContainer.classList.add('facing-disabled');
-}
-});
-
-const hexToRgba = (hex, alpha) => {
-const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
-return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-};
-
-document.getElementById('guide-color-picker').addEventListener('input', (e) => {
-document.documentElement.style.setProperty('--guide-color', hexToRgba(e.target.value, 0.4));
-document.documentElement.style.setProperty('--guide-fill-color', hexToRgba(e.target.value, 0.1));
-});
-
-document.getElementById('baseline-color-picker').addEventListener('input', (e) => {
-document.documentElement.style.setProperty('--baseline-color', hexToRgba(e.target.value, 0.2));
-});
-
-document.querySelectorAll('input[type="number"]').forEach(input => {
-input.addEventListener('keydown', (e) => {
-if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-if (e.shiftKey) {
-e.preventDefault();
-let val = parseFloat(e.target.value) || 0;
-val += e.key === 'ArrowUp' ? 10 : -10;
-e.target.value = val;
-e.target.dispatchEvent(new Event('input'));
-}
-}
-});
-});
-
-document.getElementById('doc-preset').addEventListener('change', (e) => {
-const sizes = { 'A4': ['210mm', '297mm'], 'A5': ['148mm', '210mm'], 'A6': ['105mm', '148mm'] };
-document.documentElement.style.setProperty('--doc-width', sizes[e.target.value][0]);
-document.documentElement.style.setProperty('--doc-height', sizes[e.target.value][1]);
-this.updatePrintStyle(sizes[e.target.value][0], sizes[e.target.value][1]);
-this.flowTextToPages();
-});
-
-const spatialInputs = [
-{ id: 'margin-top', var: '--m-top' },
-{ id: 'margin-bottom', var: '--m-bottom' },
-{ id: 'margin-inside', var: '--m-inside' },
-{ id: 'margin-outside', var: '--m-outside' },
-{ id: 'col-gutter', var: '--grid-gutter' },
-{ id: 'guide-rgutter', var: '--guide-rgutter' },
-{ id: 'guide-cgutter', var: '--guide-cgutter' }
-];
-
-spatialInputs.forEach(item => {
-document.getElementById(item.id).addEventListener('input', (e) => {
-document.documentElement.style.setProperty(item.var, e.target.value + 'mm');
-this.flowTextToPages();
-});
-});
-
-document.getElementById('col-count').addEventListener('input', (e) => {
-document.documentElement.style.setProperty('--grid-cols', e.target.value);
-this.flowTextToPages();
-});
-
-document.getElementById('guide-rows').addEventListener('input', (e) => {
-document.documentElement.style.setProperty('--guide-rows', e.target.value);
-});
-
-document.getElementById('guide-cols').addEventListener('input', (e) => {
-document.documentElement.style.setProperty('--guide-cols', e.target.value);
-});
-
-document.getElementById('toggle-guides').addEventListener('change', (e) => {
-e.target.checked ? this.docContainer.classList.add('show-guides') : this.docContainer.classList.remove('show-guides');
-});
-
-document.getElementById('show-extras').addEventListener('change', (e) => {
-e.target.checked ? document.body.classList.remove('hide-extras') : document.body.classList.add('hide-extras');
-});
-
-document.getElementById('baseline-grid').addEventListener('change', (e) => {
-e.target.checked ? this.docContainer.classList.add('show-baseline') : this.docContainer.classList.remove('show-baseline');
-});
-
-const autoStylesCb = document.getElementById('auto-styles');
-const autoSection = document.getElementById('auto-style-section');
-const customSection = document.getElementById('custom-style-section');
-autoStylesCb.addEventListener('change', (e) => {
-if (e.target.checked) {
-autoSection.style.display = 'block';
-customSection.style.display = 'none';
-} else {
-autoSection.style.display = 'none';
-customSection.style.display = 'block';
-}
-});
-
-document.getElementById('doc-lang').addEventListener('change', (e) => {
-this.docContainer.setAttribute('lang', e.target.value);
-});
-
-const alignBtns = document.querySelectorAll('.align-btn');
-alignBtns.forEach(btn => {
-btn.addEventListener('click', () => {
-alignBtns.forEach(b => b.classList.remove('active'));
-btn.classList.add('active');
-document.documentElement.style.setProperty('--text-align', btn.dataset.align);
-document.documentElement.style.setProperty('--text-align-last', btn.dataset.last);
-});
-});
-
-const paraInputs = [
-{ id: 'p-ml', var: '--p-ml' },
-{ id: 'p-mr', var: '--p-mr' },
-{ id: 'p-ti', var: '--p-ti' },
-{ id: 'p-mt', var: '--p-mt' },
-{ id: 'p-mb', var: '--p-mb' }
-];
-
-paraInputs.forEach(item => {
-document.getElementById(item.id).addEventListener('input', (e) => {
-document.documentElement.style.setProperty(item.var, e.target.value + 'mm');
-});
-});
-
-document.getElementById('p-drop-lines').addEventListener('input', (e) => {
-const lines = parseInt(e.target.value) || 0;
-document.documentElement.style.setProperty('--dropcap-lines', lines);
-if(lines > 0) {
-this.docContainer.classList.add('has-dropcap');
-} else {
-this.docContainer.classList.remove('has-dropcap');
-}
-this.queueReflow();
-});
-
-document.getElementById('bullet-style').addEventListener('change', (e) => {
-document.documentElement.style.setProperty('--bullet-char', `"${e.target.value} "`);
-});
-
-const applyHJEngine = () => {
-const enabled = document.getElementById('hyph-enable').checked;
-const minWords = document.getElementById('hyph-words').value;
-const before = document.getElementById('hyph-before').value;
-const after = document.getElementById('hyph-after').value;
-const limit = document.getElementById('hyph-limit').value;
-const zone = document.getElementById('hyph-zone').value;
-
-const styleSheet = document.createElement("style");
-styleSheet.innerText = `
-                       .page p { 
-                           hyphens: ${enabled ? 'auto' : 'none'};
-                           hyphenate-limit-chars: ${minWords} ${before} ${after};
-                           hyphenate-limit-lines: ${limit};
-                           hyphenate-limit-zone: ${zone};
-                       }
-                   `;
-document.head.appendChild(styleSheet);
-};
-
-['hyph-enable', 'hyph-words', 'hyph-before', 'hyph-after', 'hyph-limit', 'hyph-zone'].forEach(id => {
-document.getElementById(id).addEventListener('input', applyHJEngine);
-});
-
-const applyJustification = () => {
-const enabled = document.getElementById('justification-enable').checked;
-const inputs = ['word-space-min', 'word-space-des', 'word-space-max'];
-const wrappers = ['ws-min-wrap', 'ws-des-wrap', 'ws-max-wrap'];
-
-inputs.forEach((id, index) => {
-const el = document.getElementById(id);
-el.disabled = !enabled;
-document.getElementById(wrappers[index]).style.opacity = enabled ? '1' : '0.4';
-});
-
-if (enabled) {
-const des = parseFloat(document.getElementById('word-space-des').value) || 95;
-const emValue = (des - 100) / 100;
-document.documentElement.style.setProperty('--word-spacing', `${emValue}em`);
-} else {
-document.documentElement.style.setProperty('--word-spacing', `0em`);
-}
-};
-
-['justification-enable', 'word-space-min', 'word-space-des', 'word-space-max'].forEach(id => {
-document.getElementById(id).addEventListener('input', () => {
-applyJustification();
-this.queueReflow();
-});
-});
-applyJustification();
-
-// TOC Generator UI Hooks
-document.getElementById('btn-toggle-toc').addEventListener('click', (e) => {
-const settings = document.getElementById('toc-settings');
-if (settings.style.display === 'none') {
-settings.style.display = 'flex';
-e.target.innerText = "Update TOC";
-e.target.style.backgroundColor = "#1a1a1a";
-this.generateTOC();
-} else {
-this.generateTOC();
-}
-});
-
-document.getElementById('toc-layout-style').addEventListener('change', () => {
-this.generateTOC();
-});
-
-document.getElementById('toc-list-type').addEventListener('change', (e) => {
-document.getElementById('toc-bullet-type-group').style.display = e.target.value === 'bullet' ? 'flex' : 'none';
-this.generateTOC();
-});
-
-document.getElementById('toc-bullet-type').addEventListener('change', (e) => {
-document.getElementById('toc-custom-bullet-drop').style.display = e.target.value === 'custom' ? 'flex' : 'none';
-this.generateTOC();
-});
-
-const tocCustomDrop = document.getElementById('toc-custom-bullet-drop');
-tocCustomDrop.addEventListener('dragover', e => { e.preventDefault(); tocCustomDrop.classList.add('dragover'); });
-tocCustomDrop.addEventListener('dragleave', () => tocCustomDrop.classList.remove('dragover'));
-tocCustomDrop.addEventListener('drop', async e => {
-e.preventDefault();
-tocCustomDrop.classList.remove('dragover');
-const file = e.dataTransfer.files[0];
-if (file && file.type.match('image.*')) {
-tocCustomDrop.innerHTML = `<svg viewBox="0 0 24 24" style="width:24px;height:24px;fill:var(--primary-blue);margin-bottom:8px;"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>Loaded: ${file.name}`;
-tocCustomDrop.dataset.loadedUrl = URL.createObjectURL(file);
-this.generateTOC();
-}
-});
-
-['page-numbers', 'page-show-start', 'page-show-end', 'page-count-start', 'toc-start-page', 'body-start-page'].forEach(id => {
-const el = document.getElementById(id);
-if(el) el.addEventListener('input', () => this.queueReflow());
-});
-
-document.getElementById('btn-export').addEventListener('click', () => {
-// Temporarily change document title for a cleaner default PDF filename
-const originalTitle = document.title;
-document.title = "Procedural_Typesetting_Export";
-window.print();
-document.title = originalTitle;
-});
-}
-
-updatePrintStyle(width, height) {
-let styleEl = document.getElementById('print-style');
-if (!styleEl) {
-styleEl = document.createElement('style');
-styleEl.id = 'print-style';
-document.head.appendChild(styleEl);
-}
-// Inject actual physical dimensions into the print dialog to strip margins/headers natively
-styleEl.innerHTML = `@media print { @page { size: ${width} ${height}; margin: 0; } }`;
-}
-
-initTextUploader() {
-const setupDrop = (id, type) => {
-const zone = document.getElementById(id);
-if (!zone) return;
-zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
-zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
-zone.addEventListener('drop', async e => {
-e.preventDefault();
-zone.classList.remove('dragover');
-const file = e.dataTransfer.files[0];
-
-if (file && file.name.match(/\.(txt|md|rtf|doc|html)$/i)) {
-let text = await file.text();
-zone.innerHTML = `<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>Loaded: ${file.name}`;
-
-let html = "";
-if (file.name.endsWith('.html')) {
-html = text;
-} else {
-if (text.startsWith('{\\rtf')) text = this.cleanRTF(text);
-html = text.split(/\n\n+/).map(p => `<p>${p.trim()}</p>`).join('');
-}
-
-if (type === 'body') {
-this.pipContent.innerHTML = html;
-this.updateFromPIP();
-} else {
-this.parseHTMLToBlocks(html, 'toc');
-}
-}
-});
-};
-
-setupDrop('text-drop', 'body');
-}
-
-cleanRTF(rtf) {
-if (!rtf.startsWith('{\\rtf')) return rtf;
-
-const blocksToRemove = ['\\fonttbl', '\\colortbl', '\\stylesheet', '\\info', '\\listtable', '\\listoverridetable'];
-let text = rtf;
-
-blocksToRemove.forEach(block => {
-let index = text.indexOf(block);
-while (index !== -1) {
-let openBrace = text.lastIndexOf('{', index);
-if (openBrace !== -1) {
-let braceCount = 1;
-let closeBrace = openBrace + 1;
-while (braceCount > 0 && closeBrace < text.length) {
-if (text[closeBrace] === '{') braceCount++;
-else if (text[closeBrace] === '}') braceCount--;
-closeBrace++;
-}
-text = text.substring(0, openBrace) + text.substring(closeBrace);
-} else {
-break;
-}
-index = text.indexOf(block);
-}
-});
-
-let destIndex = text.indexOf('{\\*\\');
-while (destIndex !== -1) {
-let braceCount = 1;
-let closeBrace = destIndex + 1;
-while (braceCount > 0 && closeBrace < text.length) {
-if (text[closeBrace] === '{') braceCount++;
-else if (text[closeBrace] === '}') braceCount--;
-closeBrace++;
-}
-text = text.substring(0, destIndex) + text.substring(closeBrace);
-destIndex = text.indexOf('{\\*\\');
-}
-
-text = text.replace(/\\'([0-9a-fA-F]{2})/gi, (match, hex) => String.fromCharCode(parseInt(hex, 16)));
-text = text.replace(/\\(par|line)\b/gi, '\n');
-text = text.replace(/\\tab\b/gi, '\t');
-text = text.replace(/\\uc\d+\s?/gi, '');
-text = text.replace(/\\u(-?\d+)\s?/gi, (m, val) => String.fromCharCode(parseInt(val)));
-text = text.replace(/\\[a-zA-Z]+(-?\d+)?\s?/g, '');
-text = text.replace(/[{}]/g, '');
-text = text.replace(/\n{3,}/g, '\n\n');
-
-return text.trim();
-}
-
-generateTOC() {
-const settings = document.getElementById('toc-settings');
-if (settings.style.display === 'none') {
-this.tocTextBlocks = [];
-this.queueReflow();
-return; 
-}
-
-this.tocTextBlocks = [];
-const layoutStyle = document.getElementById('toc-layout-style').value;
-const listType = document.getElementById('toc-list-type').value;
-const bulletType = document.getElementById('toc-bullet-type').value;
-
-const title = document.createElement('h1');
-title.innerText = "Inhaltsverzeichnis";
-this.tocTextBlocks.push(title);
-
-// In 2-Page Spread mode, push a page break so list items begin on the facing page!
-if (layoutStyle === 'spread') {
-const hr = document.createElement('hr');
-this.tocTextBlocks.push(hr);
-}
-
-const list = document.createElement(listType === 'numbered' ? 'ol' : 'ul');
-if (listType === 'numbered') {
-list.style.listStyleType = 'decimal';
-list.style.paddingLeft = '20pt';
-} else {
-if (bulletType === 'custom' && document.getElementById('toc-custom-bullet-drop').dataset.loadedUrl) {
-list.style.listStyleImage = `url(${document.getElementById('toc-custom-bullet-drop').dataset.loadedUrl})`;
-list.style.paddingLeft = '20pt';
-} else {
-list.style.setProperty('--bullet-char', `"${bulletType} "`);
-list.style.paddingLeft = '14pt';
-}
-}
-
-this.bodyTextBlocks.forEach(block => {
-if (['H1', 'H2', 'H3'].includes(block.tagName)) {
-const li = document.createElement('li');
-li.innerText = block.innerText;
-
-if (block.tagName === 'H2') li.style.marginLeft = '12pt';
-if (block.tagName === 'H3') li.style.marginLeft = '24pt';
-
-list.appendChild(li);
-}
-});
-
-this.tocTextBlocks.push(list);
-this.queueReflow();
-}
-
-initCustomStyles() {
-const container = document.getElementById('custom-styles-container');
-const styles = ['H1', 'H2', 'H3', 'Para', 'Bullet', 'Page#'];
-
-styles.forEach(style => {
-const row = document.createElement('div');
-row.className = 'custom-style-row';
-
-row.innerHTML = `
-                       <span class="style-name">${style}</span>
-                       <div class="drop-zone style-drop" id="drop-${style}">Drop Font</div>
-                       <div class="style-actions">
-                           <button class="style-btn" title="Edit Metrics">⚙</button>
-                           <button class="style-btn ab-btn" title="A/B Compare">A/B</button>
-                           <button class="style-btn assign-btn" title="Assign">Assign</button>
-                       </div>
-                   `;
-
-container.appendChild(row);
-const dropZone = row.querySelector('.style-drop');
-const abBtn = row.querySelector('.ab-btn');
-
-abBtn.addEventListener('click', () => abBtn.classList.toggle('active'));
-
-dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
-dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-dropZone.addEventListener('drop', async e => {
-e.preventDefault();
-dropZone.classList.remove('dragover');
-const file = e.dataTransfer.files[0];
-if (file && (file.name.match(/\.(ttf|woff2|otf)$/i))) {
-dropZone.classList.add('filled');
-dropZone.innerText = file.name.substring(0, 10) + '...';
-
-const fontUrl = URL.createObjectURL(file);
-const familyName = `Custom_${style}_${Date.now()}`;
-const fontFace = new FontFace(familyName, `url(${fontUrl})`);
-
-try {
-const loadedFace = await fontFace.load();
-document.fonts.add(loadedFace);
-} catch(err) {
-console.error("Font load error:", err);
-}
-}
-});
-});
-}
-
-queueReflow() {
-if (this.reflowTimeout) clearTimeout(this.reflowTimeout);
-this.reflowTimeout = setTimeout(() => {
-this.flowTextToPages();
-}, 50); 
-}
-
-flowTextToPages() {
-this.docContainer.innerHTML = '';
-
-const dropcapLines = parseInt(document.getElementById('p-drop-lines').value) || 0;
-const numCheckbox = document.getElementById('page-numbers').checked;
-const showStart = parseInt(document.getElementById('page-show-start').value) || 1;
-const showEnd = parseInt(document.getElementById('page-show-end').value) || 999;
-const countStart = parseInt(document.getElementById('page-count-start').value) || 1;
-
-const getOrCreatePage = (idx) => {
-while(this.docContainer.children.length < idx) {
-const currentIdx = this.docContainer.children.length + 1;
-const page = document.createElement('div');
-page.className = 'page';
-
-const content = document.createElement('div');
-content.className = 'page-content';
-page.appendChild(content);
-
-// Grid Overlay
-const overlay = document.createElement('div');
-overlay.className = 'grid-overlay';
-const cells = parseInt(document.getElementById('guide-rows').value || 4) * parseInt(document.getElementById('guide-cols').value || 2);
-for(let j = 0; j < cells; j++) {
-const cell = document.createElement('div');
-cell.className = 'grid-cell';
-overlay.appendChild(cell);
-}
-page.appendChild(overlay);
-
-// Page Numbering Calculation
-if (numCheckbox && currentIdx >= showStart && currentIdx <= showEnd) {
-const pageNumNode = document.createElement('div');
-pageNumNode.className = 'page-number';
-const displayNumber = countStart + (currentIdx - showStart);
-pageNumNode.innerText = displayNumber;
-page.appendChild(pageNumNode);
-}
-
-this.docContainer.appendChild(page);
-}
-return this.docContainer.children[idx - 1].querySelector('.page-content');
-};
-
-// Precision overflow detection for CSS multi-column and block geometry
-const isChildOverflowing = (child, container) => {
-if (!child || !container) return false;
-
-// 1. CSS Column Overflow Detection (Most Reliable)
-// When content exceeds column height, HarfBuzz pushes it into a ghost column to the right,
-// which immediately expands the container's scrollWidth beyond its clientWidth.
-if (container.scrollWidth > container.clientWidth + 2) return true;
-if (container.scrollHeight > container.clientHeight + 2) return true;
-
-// 2. Bounding Box Geometry Detection (Fallback)
-const cRect = container.getBoundingClientRect();
-const elRect = child.getBoundingClientRect();
-
-// If the element's right edge extends past the container's right edge
-if (elRect.right > cRect.right + 2) return true;
-if (elRect.bottom > cRect.bottom + 2) return true;
-
-return false;
-};
-
-const flowBlocks = (blocks, startIdx, isBody) => {
-let pageIndex = startIdx;
-let currentContentNode = getOrCreatePage(pageIndex);
-
-for (let i = 0; i < blocks.length; i++) {
-const block = blocks[i];
-
-// Frame Break / Page Break handling
-if (block.tagName === 'HR') {
-pageIndex++;
-currentContentNode = getOrCreatePage(pageIndex);
-continue;
-}
-
-// SMART LIST PAGINATION: Split lists item-by-item across pages seamlessly
-if (block.tagName === 'UL' || block.tagName === 'OL') {
-const listItems = Array.from(block.children);
-if (listItems.length === 0) continue;
-
-let currentList = block.cloneNode(false);
-currentContentNode.appendChild(currentList);
-
-// If there is zero room on this page even for the list container, push to next page
-if (isChildOverflowing(currentList, currentContentNode)) {
-currentContentNode.removeChild(currentList);
-pageIndex++;
-currentContentNode = getOrCreatePage(pageIndex);
-currentList = block.cloneNode(false);
-currentContentNode.appendChild(currentList);
-}
-
-let olCounter = block.tagName === 'OL' ? (parseInt(block.getAttribute('start')) || 1) : 1;
-
-for (let j = 0; j < listItems.length; j++) {
-const li = listItems[j].cloneNode(true);
-currentList.appendChild(li);
-
-if (isChildOverflowing(li, currentContentNode)) {
-// Item caused overflow: remove from current page and break to next page
-currentList.removeChild(li);
-
-// If previous page list container was left empty, clean it up
-if (currentList.children.length === 0) {
-currentContentNode.removeChild(currentList);
-}
-
-pageIndex++;
-currentContentNode = getOrCreatePage(pageIndex);
-
-// Create continuation list on the new page
-currentList = block.cloneNode(false);
-if (block.tagName === 'OL') {
-currentList.setAttribute('start', olCounter);
-}
-currentContentNode.appendChild(currentList);
-currentList.appendChild(li);
-}
-
-if (block.tagName === 'OL') olCounter++;
-}
-continue;
-}
-
-// Standard blocks (Paragraphs, Headings)
-const clone = block.cloneNode(true);
-
-if (isBody && dropcapLines > 0 && i === 0 && clone.tagName === 'P') {
-clone.classList.add('dropcap');
-}
-
-currentContentNode.appendChild(clone);
-
-if (isChildOverflowing(clone, currentContentNode)) {
-currentContentNode.removeChild(clone);
-pageIndex++;
-currentContentNode = getOrCreatePage(pageIndex);
-currentContentNode.appendChild(clone);
-}
-}
-return pageIndex;
-};
-
-let lastUsedPage = 0;
-
-// 1. Flow Table of Contents
-if (this.tocTextBlocks.length > 0) {
-let tocStart = parseInt(document.getElementById('toc-start-page').value) || 1;
-lastUsedPage = flowBlocks(this.tocTextBlocks, tocStart, false);
-}
-
-// 2. Flow Body Text with dynamic self-healing offset
-if (this.bodyTextBlocks.length > 0) {
-let bodyStart = parseInt(document.getElementById('body-start-page').value) || 1;
-let actualBodyStart = Math.max(lastUsedPage + 1, bodyStart); 
-
-if (this.tocTextBlocks.length === 0) actualBodyStart = bodyStart;
-
-flowBlocks(this.bodyTextBlocks, actualBodyStart, true);
-}
-}
-}
-
-window.addEventListener('DOMContentLoaded', () => {
-new TypesettingEngine();
-document.getElementById('toggle-guides').checked = true;
-document.getElementById('baseline-grid').checked = true;
-});
-</script>
-
-</body></html>
+                this.canvas.style.transform = `translate(calc(-50% + ${this.translateX}px), calc(-50% + ${this.translateY}px)) scale(${this.scale})`;
+            }
+
+            initPIPEditor() {
+                document.execCommand('defaultParagraphSeparator', false, 'p');
+
+                document.querySelectorAll('.pip-btn').forEach(btn => {
+                    btn.addEventListener('mousedown', e => e.preventDefault());
+                    btn.addEventListener('click', () => {
+                        const tag = btn.dataset.tag;
+                        if (tag === 'UL') {
+                            document.execCommand('insertUnorderedList', false, null);
+                        } else {
+                            document.execCommand('formatBlock', false, tag);
+                        }
+                        this.updateFromPIP();
+                    });
+                });
+
+                document.getElementById('btn-page-break').addEventListener('click', () => {
+                    document.execCommand('insertHorizontalRule', false, null);
+                    this.updateFromPIP();
+                });
+
+                document.getElementById('btn-save-text').addEventListener('click', () => {
+                    const blob = new Blob([this.pipContent.innerHTML], { type: 'text/html' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'typesetting-backup.html';
+                    a.click();
+                    URL.revokeObjectURL(url);
+                });
+
+                window.addEventListener('keydown', (e) => {
+                    const activeTag = document.activeElement.tagName;
+                    const isInput = activeTag === 'INPUT' || activeTag === 'SELECT' || document.activeElement.isContentEditable;
+                    
+                    if (e.key.toLowerCase() === 't' && !isInput) {
+                        e.preventDefault();
+                        this.pipPanel.classList.add('open');
+                    }
+                });
+
+                this.pipPanel.addEventListener('mousedown', () => {
+                    if (!this.pipPanel.classList.contains('active')) {
+                        this.pipPanel.classList.add('active');
+                    }
+                });
+
+                document.addEventListener('mousedown', (e) => {
+                    if (this.pipPanel.classList.contains('open') && !this.pipPanel.contains(e.target)) {
+                        this.pipPanel.classList.remove('open');
+                        this.pipPanel.classList.remove('active');
+                    }
+                });
+
+                window.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape' && this.pipPanel.classList.contains('open')) {
+                        this.pipPanel.classList.remove('open');
+                        this.pipPanel.classList.remove('active');
+                        this.workspace.focus();
+                    }
+                });
+
+                let timeout = null;
+                this.pipContent.addEventListener('input', () => {
+                    clearTimeout(timeout);
+                    timeout = setTimeout(() => {
+                        this.updateFromPIP();
+                    }, 400);
+                });
+            }
+
+            updateFromPIP() {
+                const html = this.pipContent.innerHTML;
+                localStorage.setItem('typesetting-pip-cache', html);
+                this.parseHTMLToBlocks(html, 'body');
+            }
+
+            parseHTMLToBlocks(html, type) {
+                const temp = document.createElement('div');
+                temp.innerHTML = html;
+                
+                let blocks = [];
+                temp.childNodes.forEach(node => {
+                    if (node.nodeType === 1) {
+                        blocks.push(node.cloneNode(true));
+                    } else if (node.nodeType === 3 && node.textContent.trim()) {
+                        const p = document.createElement('p');
+                        p.textContent = node.textContent;
+                        blocks.push(p);
+                    }
+                });
+
+                if (type === 'toc') {
+                    this.tocTextBlocks = blocks;
+                    this.queueReflow();
+                }
+                
+                if (type === 'body') {
+                    this.bodyTextBlocks = blocks;
+                    this.generateTOC(); 
+                }
+            }
+
+            initPreflight() {
+                const modal = document.getElementById('preflight-modal');
+                const btnOpen = document.getElementById('btn-preflight');
+                const btnClose = document.getElementById('pf-close-btn');
+                const layoutSel = document.getElementById('pf-layout');
+                const marksGroup = document.getElementById('pf-marks-group');
+                const foldCb = document.getElementById('pf-fold-marks');
+                const pfDoc = document.getElementById('preflight-doc-container');
+                const btnPrint = document.getElementById('pf-print-btn');
+                const originalBtnExport = document.getElementById('btn-export');
+                
+                const createSheet = (marks) => {
+                    const div = document.createElement('div');
+                    div.className = 'print-sheet';
+                    if(marks) div.classList.add('show-fold-marks');
+                    return div;
+                };
+                
+                const createBlankPage = () => {
+                    const div = document.createElement('div');
+                    div.className = 'page blank-page';
+                    div.style.background = 'white';
+                    div.style.boxShadow = 'none';
+                    return div;
+                };
+
+                const renderPreview = () => {
+                    pfDoc.innerHTML = '';
+                    // Pull only actual rendered pages
+                    const pages = Array.from(this.docContainer.querySelectorAll('.page:not(.blank-page)'));
+                    const layout = layoutSel.value;
+                    const marks = foldCb.checked;
+                    
+                    // Maintain margin geometry visually
+                    pfDoc.className = this.docContainer.className;
+                    pfDoc.classList.add('imposition-container');
+                    
+                    if (layout === 'spreads' || layout === 'booklet') {
+                        pfDoc.classList.add('imposition-2up');
+                        pfDoc.style.width = 'auto'; // Flex row stacking
+                        
+                        let clonedPages = pages.map(p => p.cloneNode(true));
+                        
+                        if (layout === 'booklet') {
+                            // True Saddle-Stitch Logic
+                            // Pad to multiple of 4
+                            while(clonedPages.length % 4 !== 0) {
+                                clonedPages.push(createBlankPage());
+                            }
+                            
+                            let total = clonedPages.length;
+                            for (let i = 0; i < total / 2; i++) {
+                                let sheet = createSheet(marks);
+                                if (i % 2 === 0) {
+                                    sheet.appendChild(clonedPages[total - 1 - i]); // Left: Back
+                                    sheet.appendChild(clonedPages[i]);             // Right: Front
+                                } else {
+                                    sheet.appendChild(clonedPages[i]);             // Left: Inner Front
+                                    sheet.appendChild(clonedPages[total - 1 - i]); // Right: Inner Back
+                                }
+                                pfDoc.appendChild(sheet);
+                            }
+                        } else {
+                            // Sequential 2-Up Spreads
+                            for(let i=0; i < clonedPages.length; i+=2) {
+                                let sheet = createSheet(marks);
+                                sheet.appendChild(clonedPages[i]);
+                                if(clonedPages[i+1]) {
+                                    sheet.appendChild(clonedPages[i+1]);
+                                } else {
+                                    sheet.appendChild(createBlankPage());
+                                }
+                                pfDoc.appendChild(sheet);
+                            }
+                        }
+                    } else {
+                        // Single Pages
+                        pfDoc.classList.remove('imposition-2up');
+                        pfDoc.style.width = `calc((var(--doc-width) * 2) + 120px)`; 
+                        pages.forEach(p => pfDoc.appendChild(p.cloneNode(true)));
+                    }
+                    
+                    // Scale to fit preview window
+                    setTimeout(() => {
+                        const area = document.getElementById('pf-preview-area');
+                        const scaleWrapper = document.getElementById('preflight-preview-scale');
+                        const scaleX = (area.clientWidth - 100) / pfDoc.scrollWidth;
+                        const scaleY = (area.clientHeight - 100) / pfDoc.scrollHeight;
+                        const finalScale = Math.min(scaleX, scaleY, 1);
+                        scaleWrapper.style.transform = `scale(${finalScale})`;
+                    }, 50);
+                };
+                
+                btnOpen.addEventListener('click', () => {
+                    modal.style.display = 'flex';
+                    renderPreview();
+                });
+                
+                btnClose.addEventListener('click', () => {
+                    modal.style.display = 'none';
+                });
+                
+                layoutSel.addEventListener('change', (e) => {
+                    marksGroup.style.display = (e.target.value === 'spreads' || e.target.value === 'booklet') ? 'flex' : 'none';
+                    renderPreview();
+                });
+                
+                foldCb.addEventListener('change', renderPreview);
+                
+                // WYSIWYG Print Execution
+                const triggerPrint = (layout, marks) => {
+                    const originalHTML = this.docContainer.innerHTML;
+                    const originalClasses = this.docContainer.className;
+                    
+                    // Push the formatted imposition straight into the main DOM for printing
+                    renderPreview(); 
+                    this.docContainer.innerHTML = pfDoc.innerHTML;
+                    this.docContainer.className = pfDoc.className;
+
+                    // Dynamically set @page dimensions to strip browser headers
+                    const style = document.createElement('style');
+                    style.id = 'print-page-style';
+                    let width = getComputedStyle(document.documentElement).getPropertyValue('--doc-width').trim();
+                    let height = getComputedStyle(document.documentElement).getPropertyValue('--doc-height').trim();
+                    
+                    let printWidth = width;
+                    if (layout === 'spreads' || layout === 'booklet') {
+                        let val = parseFloat(width);
+                        let unit = width.replace(/[0-9.]/g, '');
+                        printWidth = (val * 2) + unit;
+                    }
+                    
+                    style.innerText = `@page { size: ${printWidth} ${height}; margin: 0; }`;
+                    document.head.appendChild(style);
+                    
+                    const originalTitle = document.title;
+                    document.title = "Procedural_Typesetting_Export";
+                    
+                    window.print();
+                    
+                    // Restoration
+                    setTimeout(() => {
+                        document.title = originalTitle;
+                        document.head.removeChild(style);
+                        this.docContainer.innerHTML = originalHTML;
+                        this.docContainer.className = originalClasses;
+                    }, 1500);
+                };
+                
+                btnPrint.addEventListener('click', () => {
+                    modal.style.display = 'none';
+                    triggerPrint(layoutSel.value, foldCb.checked);
+                });
+
+                originalBtnExport.addEventListener('click', () => {
+                    // Export Direct assumes Single Page
+                    triggerPrint('single', false);
+                });
+            }
+
+            initUIListeners() {
+                document.getElementById('doc-layout').addEventListener('change', (e) => {
+                    if (e.target.value === 'facing') {
+                        this.docContainer.classList.add('facing-enabled');
+                        this.docContainer.classList.remove('facing-disabled');
+                    } else {
+                        this.docContainer.classList.remove('facing-enabled');
+                        this.docContainer.classList.add('facing-disabled');
+                    }
+                });
+
+                const hexToRgba = (hex, alpha) => {
+                    const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
+                    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+                };
+                
+                document.getElementById('guide-color-picker').addEventListener('input', (e) => {
+                    document.documentElement.style.setProperty('--guide-color', hexToRgba(e.target.value, 0.4));
+                    document.documentElement.style.setProperty('--guide-fill-color', hexToRgba(e.target.value, 0.1));
+                });
+                
+                document.getElementById('baseline-color-picker').addEventListener('input', (e) => {
+                    document.documentElement.style.setProperty('--baseline-color', hexToRgba(e.target.value, 0.2));
+                });
+
+                document.querySelectorAll('input[type="number"]').forEach(input => {
+                    input.addEventListener('keydown', (e) => {
+                        if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                            if (e.shiftKey) {
+                                e.preventDefault();
+                                let val = parseFloat(e.target.value) || 0;
+                                val += e.key === 'ArrowUp' ? 10 : -10;
+                                e.target.value = val;
+                                e.target.dispatchEvent(new Event('input'));
+                            }
+                        }
+                    });
+                });
+
+                document.getElementById('doc-preset').addEventListener('change', (e) => {
+                    const sizes = { 'A4': ['210mm', '297mm'], 'A5': ['148mm', '210mm'], 'A6': ['105mm', '148mm'] };
+                    document.documentElement.style.setProperty('--doc-width', sizes[e.target.value][0]);
+                    document.documentElement.style.setProperty('--doc-height', sizes[e.target.value][1]);
+                    this.flowTextToPages();
+                });
+
+                const spatialInputs = [
+                    { id: 'margin-top', var: '--m-top' },
+                    { id: 'margin-bottom', var: '--m-bottom' },
+                    { id: 'margin-inside', var: '--m-inside' },
+                    { id: 'margin-outside', var: '--m-outside' },
+                    { id: 'col-gutter', var: '--grid-gutter' },
+                    { id: 'guide-rgutter', var: '--guide-rgutter' },
+                    { id: 'guide-cgutter', var: '--guide-cgutter' }
+                ];
+                
+                spatialInputs.forEach(item => {
+                    document.getElementById(item.id).addEventListener('input', (e) => {
+                        document.documentElement.style.setProperty(item.var, e.target.value + 'mm');
+                        this.flowTextToPages();
+                    });
+                });
+
+                document.getElementById('col-count').addEventListener('input', (e) => {
+                    document.documentElement.style.setProperty('--grid-cols', e.target.value);
+                    this.flowTextToPages();
+                });
+                
+                document.getElementById('guide-rows').addEventListener('input', (e) => {
+                    document.documentElement.style.setProperty('--guide-rows', e.target.value);
+                });
+                
+                document.getElementById('guide-cols').addEventListener('input', (e) => {
+                    document.documentElement.style.setProperty('--guide-cols', e.target.value);
+                });
+
+                document.getElementById('toggle-guides').addEventListener('change', (e) => {
+                    e.target.checked ? this.docContainer.classList.add('show-guides') : this.docContainer.classList.remove('show-guides');
+                });
+
+                document.getElementById('show-extras').addEventListener('change', (e) => {
+                    e.target.checked ? document.body.classList.remove('hide-extras') : document.body.classList.add('hide-extras');
+                });
+                
+                document.getElementById('baseline-grid').addEventListener('change', (e) => {
+                    e.target.checked ? this.docContainer.classList.add('show-baseline') : this.docContainer.classList.remove('show-baseline');
+                });
+
+                const autoStylesCb = document.getElementById('auto-styles');
+                const autoSection = document.getElementById('auto-style-section');
+                const customSection = document.getElementById('custom-style-section');
+                autoStylesCb.addEventListener('change', (e) => {
+                    if (e.target.checked) {
+                        autoSection.style.display = 'block';
+                        customSection.style.display = 'none';
+                    } else {
+                        autoSection.style.display = 'none';
+                        customSection.style.display = 'block';
+                    }
+                });
+
+                document.getElementById('doc-lang').addEventListener('change', (e) => {
+                    this.docContainer.setAttribute('lang', e.target.value);
+                });
+
+                const alignBtns = document.querySelectorAll('.align-btn');
+                alignBtns.forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        alignBtns.forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        document.documentElement.style.setProperty('--text-align', btn.dataset.align);
+                        document.documentElement.style.setProperty('--text-align-last', btn.dataset.last);
+                    });
+                });
+
+                const paraInputs = [
+                    { id: 'p-ml', var: '--p-ml' },
+                    { id: 'p-mr', var: '--p-mr' },
+                    { id: 'p-ti', var: '--p-ti' },
+                    { id: 'p-mt', var: '--p-mt' },
+                    { id: 'p-mb', var: '--p-mb' }
+                ];
+
+                paraInputs.forEach(item => {
+                    document.getElementById(item.id).addEventListener('input', (e) => {
+                        document.documentElement.style.setProperty(item.var, e.target.value + 'mm');
+                    });
+                });
+
+                document.getElementById('p-drop-lines').addEventListener('input', (e) => {
+                    const lines = parseInt(e.target.value) || 0;
+                    document.documentElement.style.setProperty('--dropcap-lines', lines);
+                    if(lines > 0) {
+                        this.docContainer.classList.add('has-dropcap');
+                    } else {
+                        this.docContainer.classList.remove('has-dropcap');
+                    }
+                    this.queueReflow();
+                });
+
+                document.getElementById('bullet-style').addEventListener('change', (e) => {
+                    document.documentElement.style.setProperty('--bullet-char', `"${e.target.value} "`);
+                });
+
+                const applyHJEngine = () => {
+                    const enabled = document.getElementById('hyph-enable').checked;
+                    const minWords = document.getElementById('hyph-words').value;
+                    const before = document.getElementById('hyph-before').value;
+                    const after = document.getElementById('hyph-after').value;
+                    const limit = document.getElementById('hyph-limit').value;
+                    const zone = document.getElementById('hyph-zone').value;
+
+                    const styleSheet = document.createElement("style");
+                    styleSheet.innerText = `
+                        .page p { 
+                            hyphens: ${enabled ? 'auto' : 'none'};
+                            hyphenate-limit-chars: ${minWords} ${before} ${after};
+                            hyphenate-limit-lines: ${limit};
+                            hyphenate-limit-zone: ${zone};
+                        }
+                    `;
+                    document.head.appendChild(styleSheet);
+                };
+
+                ['hyph-enable', 'hyph-words', 'hyph-before', 'hyph-after', 'hyph-limit', 'hyph-zone'].forEach(id => {
+                    document.getElementById(id).addEventListener('input', applyHJEngine);
+                });
+
+                const applyJustification = () => {
+                    const enabled = document.getElementById('justification-enable').checked;
+                    const inputs = ['word-space-min', 'word-space-des', 'word-space-max'];
+                    const wrappers = ['ws-min-wrap', 'ws-des-wrap', 'ws-max-wrap'];
+                    
+                    inputs.forEach((id, index) => {
+                        const el = document.getElementById(id);
+                        el.disabled = !enabled;
+                        document.getElementById(wrappers[index]).style.opacity = enabled ? '1' : '0.4';
+                    });
+
+                    if (enabled) {
+                        const des = parseFloat(document.getElementById('word-space-des').value) || 100;
+                        const emValue = (des - 100) / 100;
+                        document.documentElement.style.setProperty('--word-spacing', `${emValue}em`);
+                    } else {
+                        document.documentElement.style.setProperty('--word-spacing', `0em`);
+                    }
+                };
+
+                ['justification-enable', 'word-space-min', 'word-space-des', 'word-space-max'].forEach(id => {
+                    document.getElementById(id).addEventListener('input', () => {
+                        applyJustification();
+                        this.queueReflow();
+                    });
+                });
+                applyJustification();
+
+                // TOC Generator UI Hooks
+                document.getElementById('btn-toggle-toc').addEventListener('click', (e) => {
+                    const settings = document.getElementById('toc-settings');
+                    if (settings.style.display === 'none') {
+                        settings.style.display = 'flex';
+                        e.target.innerText = "Update TOC";
+                        e.target.style.backgroundColor = "#1a1a1a";
+                        this.generateTOC();
+                    } else {
+                        this.generateTOC();
+                    }
+                });
+
+                document.getElementById('toc-layout-style').addEventListener('change', () => {
+                    this.generateTOC();
+                });
+
+                document.getElementById('toc-list-type').addEventListener('change', (e) => {
+                    document.getElementById('toc-bullet-type-group').style.display = e.target.value === 'bullet' ? 'flex' : 'none';
+                    this.generateTOC();
+                });
+
+                document.getElementById('toc-bullet-type').addEventListener('change', (e) => {
+                    document.getElementById('toc-custom-bullet-drop').style.display = e.target.value === 'custom' ? 'flex' : 'none';
+                    this.generateTOC();
+                });
+
+                const tocCustomDrop = document.getElementById('toc-custom-bullet-drop');
+                tocCustomDrop.addEventListener('dragover', e => { e.preventDefault(); tocCustomDrop.classList.add('dragover'); });
+                tocCustomDrop.addEventListener('dragleave', () => tocCustomDrop.classList.remove('dragover'));
+                tocCustomDrop.addEventListener('drop', async e => {
+                    e.preventDefault();
+                    tocCustomDrop.classList.remove('dragover');
+                    const file = e.dataTransfer.files[0];
+                    if (file && file.type.match('image.*')) {
+                        tocCustomDrop.innerHTML = `<svg viewBox="0 0 24 24" style="width:24px;height:24px;fill:var(--primary-blue);margin-bottom:8px;"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>Loaded: ${file.name}`;
+                        tocCustomDrop.dataset.loadedUrl = URL.createObjectURL(file);
+                        this.generateTOC();
+                    }
+                });
+
+                ['page-numbers', 'page-show-start', 'page-show-end', 'page-count-start', 'toc-start-page', 'body-start-page'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if(el) el.addEventListener('input', () => this.queueReflow());
+                });
+            }
+
+            initTextUploader() {
+                const setupDrop = (id, type) => {
+                    const zone = document.getElementById(id);
+                    if (!zone) return;
+                    zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+                    zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+                    zone.addEventListener('drop', async e => {
+                        e.preventDefault();
+                        zone.classList.remove('dragover');
+                        const file = e.dataTransfer.files[0];
+                        
+                        if (file && file.name.match(/\.(txt|md|rtf|doc|html)$/i)) {
+                            let text = await file.text();
+                            zone.innerHTML = `<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>Loaded: ${file.name}`;
+                            
+                            let html = "";
+                            if (file.name.endsWith('.html')) {
+                                html = text;
+                            } else {
+                                if (text.startsWith('{\\rtf')) text = this.cleanRTF(text);
+                                html = text.split(/\n\n+/).map(p => `<p>${p.trim()}</p>`).join('');
+                            }
+                            
+                            if (type === 'body') {
+                                this.pipContent.innerHTML = html;
+                                this.updateFromPIP();
+                            } else {
+                                this.parseHTMLToBlocks(html, 'toc');
+                            }
+                        }
+                    });
+                };
+
+                setupDrop('text-drop', 'body');
+            }
+
+            cleanRTF(rtf) {
+                if (!rtf.startsWith('{\\rtf')) return rtf;
+                
+                const blocksToRemove = ['\\fonttbl', '\\colortbl', '\\stylesheet', '\\info', '\\listtable', '\\listoverridetable'];
+                let text = rtf;
+                
+                blocksToRemove.forEach(block => {
+                    let index = text.indexOf(block);
+                    while (index !== -1) {
+                        let openBrace = text.lastIndexOf('{', index);
+                        if (openBrace !== -1) {
+                            let braceCount = 1;
+                            let closeBrace = openBrace + 1;
+                            while (braceCount > 0 && closeBrace < text.length) {
+                                if (text[closeBrace] === '{') braceCount++;
+                                else if (text[closeBrace] === '}') braceCount--;
+                                closeBrace++;
+                            }
+                            text = text.substring(0, openBrace) + text.substring(closeBrace);
+                        } else {
+                            break;
+                        }
+                        index = text.indexOf(block);
+                    }
+                });
+
+                let destIndex = text.indexOf('{\\*\\');
+                while (destIndex !== -1) {
+                    let braceCount = 1;
+                    let closeBrace = destIndex + 1;
+                    while (braceCount > 0 && closeBrace < text.length) {
+                        if (text[closeBrace] === '{') braceCount++;
+                        else if (text[closeBrace] === '}') braceCount--;
+                        closeBrace++;
+                    }
+                    text = text.substring(0, destIndex) + text.substring(closeBrace);
+                    destIndex = text.indexOf('{\\*\\');
+                }
+
+                text = text.replace(/\\'([0-9a-fA-F]{2})/gi, (match, hex) => String.fromCharCode(parseInt(hex, 16)));
+                text = text.replace(/\\(par|line)\b/gi, '\n');
+                text = text.replace(/\\tab\b/gi, '\t');
+                text = text.replace(/\\uc\d+\s?/gi, '');
+                text = text.replace(/\\u(-?\d+)\s?/gi, (m, val) => String.fromCharCode(parseInt(val)));
+                text = text.replace(/\\[a-zA-Z]+(-?\d+)?\s?/g, '');
+                text = text.replace(/[{}]/g, '');
+                text = text.replace(/\n{3,}/g, '\n\n');
+                
+                return text.trim();
+            }
+
+            generateTOC() {
+                const settings = document.getElementById('toc-settings');
+                if (settings.style.display === 'none') {
+                    this.tocTextBlocks = [];
+                    this.queueReflow();
+                    return; 
+                }
+
+                this.tocTextBlocks = [];
+                const layoutStyle = document.getElementById('toc-layout-style').value;
+                const listType = document.getElementById('toc-list-type').value;
+                const bulletType = document.getElementById('toc-bullet-type').value;
+                
+                const title = document.createElement('h1');
+                title.innerText = "Inhaltsverzeichnis";
+                this.tocTextBlocks.push(title);
+
+                if (layoutStyle === 'spread') {
+                    const hr = document.createElement('hr');
+                    this.tocTextBlocks.push(hr);
+                }
+
+                const list = document.createElement(listType === 'numbered' ? 'ol' : 'ul');
+                if (listType === 'numbered') {
+                    list.style.listStyleType = 'decimal';
+                    list.style.paddingLeft = '20pt';
+                } else {
+                    if (bulletType === 'custom' && document.getElementById('toc-custom-bullet-drop').dataset.loadedUrl) {
+                        list.style.listStyleImage = `url(${document.getElementById('toc-custom-bullet-drop').dataset.loadedUrl})`;
+                        list.style.paddingLeft = '20pt';
+                    } else {
+                        list.style.setProperty('--bullet-char', `"${bulletType} "`);
+                        list.style.paddingLeft = '14pt';
+                    }
+                }
+
+                this.bodyTextBlocks.forEach(block => {
+                    if (['H1', 'H2', 'H3'].includes(block.tagName)) {
+                        const li = document.createElement('li');
+                        li.innerText = block.innerText;
+                        
+                        if (block.tagName === 'H2') li.style.marginLeft = '12pt';
+                        if (block.tagName === 'H3') li.style.marginLeft = '24pt';
+                        
+                        list.appendChild(li);
+                    }
+                });
+
+                this.tocTextBlocks.push(list);
+                this.queueReflow();
+            }
+
+            initCustomStyles() {
+                const container = document.getElementById('custom-styles-container');
+                const styles = ['H1', 'H2', 'H3', 'Para', 'Bullet', 'Page#'];
+
+                styles.forEach(style => {
+                    const row = document.createElement('div');
+                    row.className = 'custom-style-row';
+                    
+                    row.innerHTML = `
+                        <span class="style-name">${style}</span>
+                        <div class="drop-zone style-drop" id="drop-${style}">Drop Font</div>
+                        <div class="style-actions">
+                            <button class="style-btn" title="Edit Metrics">⚙</button>
+                            <button class="style-btn ab-btn" title="A/B Compare">A/B</button>
+                            <button class="style-btn assign-btn" title="Assign">Assign</button>
+                        </div>
+                    `;
+                    
+                    container.appendChild(row);
+                    const dropZone = row.querySelector('.style-drop');
+                    const abBtn = row.querySelector('.ab-btn');
+
+                    abBtn.addEventListener('click', () => abBtn.classList.toggle('active'));
+
+                    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+                    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+                    dropZone.addEventListener('drop', async e => {
+                        e.preventDefault();
+                        dropZone.classList.remove('dragover');
+                        const file = e.dataTransfer.files[0];
+                        if (file && (file.name.match(/\.(ttf|woff2|otf)$/i))) {
+                            dropZone.classList.add('filled');
+                            dropZone.innerText = file.name.substring(0, 10) + '...';
+                            
+                            const fontUrl = URL.createObjectURL(file);
+                            const familyName = `Custom_${style}_${Date.now()}`;
+                            const fontFace = new FontFace(familyName, `url(${fontUrl})`);
+                            
+                            try {
+                                const loadedFace = await fontFace.load();
+                                document.fonts.add(loadedFace);
+                            } catch(err) {
+                                console.error("Font load error:", err);
+                            }
+                        }
+                    });
+                });
+            }
+
+            queueReflow() {
+                if (this.reflowTimeout) clearTimeout(this.reflowTimeout);
+                this.reflowTimeout = setTimeout(() => {
+                    this.flowTextToPages();
+                }, 50); 
+            }
+
+            flowTextToPages() {
+                this.docContainer.innerHTML = '';
+                
+                const dropcapLines = parseInt(document.getElementById('p-drop-lines').value) || 0;
+                const numCheckbox = document.getElementById('page-numbers').checked;
+                const showStart = parseInt(document.getElementById('page-show-start').value) || 1;
+                const showEnd = parseInt(document.getElementById('page-show-end').value) || 999;
+                const countStart = parseInt(document.getElementById('page-count-start').value) || 1;
+
+                const getOrCreatePage = (idx) => {
+                    while(this.docContainer.children.length < idx) {
+                        const currentIdx = this.docContainer.children.length + 1;
+                        const page = document.createElement('div');
+                        
+                        // FLAWLESS IMPOSITION LOCK: Use classes to hard-lock padding based on index
+                        // This guarantees the margin doesn't shift if the page moves to an odd position on a saddle-stitch sheet
+                        page.className = `page ${currentIdx % 2 !== 0 ? 'odd-page' : 'even-page'}`;
+                        
+                        const content = document.createElement('div');
+                        content.className = 'page-content';
+                        page.appendChild(content);
+                        
+                        const overlay = document.createElement('div');
+                        overlay.className = 'grid-overlay';
+                        const cells = parseInt(document.getElementById('guide-rows').value || 4) * parseInt(document.getElementById('guide-cols').value || 2);
+                        for(let j = 0; j < cells; j++) {
+                            const cell = document.createElement('div');
+                            cell.className = 'grid-cell';
+                            overlay.appendChild(cell);
+                        }
+                        page.appendChild(overlay);
+
+                        if (numCheckbox && currentIdx >= showStart && currentIdx <= showEnd) {
+                            const pageNumNode = document.createElement('div');
+                            pageNumNode.className = 'page-number';
+                            const displayNumber = countStart + (currentIdx - showStart);
+                            pageNumNode.innerText = displayNumber;
+                            page.appendChild(pageNumNode);
+                        }
+
+                        this.docContainer.appendChild(page);
+                    }
+                    return this.docContainer.children[idx - 1].querySelector('.page-content');
+                };
+
+                const isChildOverflowing = (child, container) => {
+                    if (!child || !container) return false;
+                    if (container.scrollWidth > container.clientWidth + 2) return true;
+                    if (container.scrollHeight > container.clientHeight + 2) return true;
+                    
+                    const cRect = container.getBoundingClientRect();
+                    const elRect = child.getBoundingClientRect();
+                    
+                    if (elRect.right > cRect.right + 2) return true;
+                    if (elRect.bottom > cRect.bottom + 2) return true;
+                    
+                    return false;
+                };
+
+                const flowBlocks = (blocks, startIdx, isBody) => {
+                    let pageIndex = startIdx;
+                    let currentContentNode = getOrCreatePage(pageIndex);
+                    
+                    for (let i = 0; i < blocks.length; i++) {
+                        const block = blocks[i];
+                        
+                        if (block.tagName === 'HR') {
+                            pageIndex++;
+                            currentContentNode = getOrCreatePage(pageIndex);
+                            continue;
+                        }
+
+                        if (block.tagName === 'UL' || block.tagName === 'OL') {
+                            const listItems = Array.from(block.children);
+                            if (listItems.length === 0) continue;
+
+                            let currentList = block.cloneNode(false);
+                            currentContentNode.appendChild(currentList);
+
+                            if (isChildOverflowing(currentList, currentContentNode)) {
+                                currentContentNode.removeChild(currentList);
+                                pageIndex++;
+                                currentContentNode = getOrCreatePage(pageIndex);
+                                currentList = block.cloneNode(false);
+                                currentContentNode.appendChild(currentList);
+                            }
+
+                            let olCounter = block.tagName === 'OL' ? (parseInt(block.getAttribute('start')) || 1) : 1;
+
+                            for (let j = 0; j < listItems.length; j++) {
+                                const li = listItems[j].cloneNode(true);
+                                currentList.appendChild(li);
+
+                                if (isChildOverflowing(li, currentContentNode)) {
+                                    currentList.removeChild(li);
+
+                                    if (currentList.children.length === 0) {
+                                        currentContentNode.removeChild(currentList);
+                                    }
+
+                                    pageIndex++;
+                                    currentContentNode = getOrCreatePage(pageIndex);
+
+                                    currentList = block.cloneNode(false);
+                                    if (block.tagName === 'OL') {
+                                        currentList.setAttribute('start', olCounter);
+                                    }
+                                    currentContentNode.appendChild(currentList);
+                                    currentList.appendChild(li);
+                                }
+
+                                if (block.tagName === 'OL') olCounter++;
+                            }
+                            continue;
+                        }
+
+                        const clone = block.cloneNode(true);
+                        
+                        if (isBody && dropcapLines > 0 && i === 0 && clone.tagName === 'P') {
+                            clone.classList.add('dropcap');
+                        }
+                        
+                        currentContentNode.appendChild(clone);
+                        
+                        if (isChildOverflowing(clone, currentContentNode)) {
+                            currentContentNode.removeChild(clone);
+                            pageIndex++;
+                            currentContentNode = getOrCreatePage(pageIndex);
+                            currentContentNode.appendChild(clone);
+                        }
+                    }
+                    return pageIndex;
+                };
+
+                let lastUsedPage = 0;
+
+                if (this.tocTextBlocks.length > 0) {
+                    let tocStart = parseInt(document.getElementById('toc-start-page').value) || 1;
+                    lastUsedPage = flowBlocks(this.tocTextBlocks, tocStart, false);
+                }
+
+                if (this.bodyTextBlocks.length > 0) {
+                    let bodyStart = parseInt(document.getElementById('body-start-page').value) || 1;
+                    let actualBodyStart = Math.max(lastUsedPage + 1, bodyStart); 
+                    
+                    if (this.tocTextBlocks.length === 0) actualBodyStart = bodyStart;
+
+                    flowBlocks(this.bodyTextBlocks, actualBodyStart, true);
+                }
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            new TypesettingEngine();
+            document.getElementById('toggle-guides').checked = true;
+            document.getElementById('baseline-grid').checked = true;
+        });
+    </script>
+</body>
+</html>
