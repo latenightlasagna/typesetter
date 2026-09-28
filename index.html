@@ -582,14 +582,19 @@
         }
         .preflight-preview-area {
             flex: 1; background: #8c8c8c;
-            display: flex; justify-content: center; align-items: center;
-            overflow: auto; position: relative;
+            position: relative;
+            overflow: hidden;
+            cursor: grab;
             background-image: radial-gradient(#7a7a7a 1px, transparent 0);
             background-size: 20px 20px;
         }
+        .preflight-preview-area:active { cursor: grabbing; }
         #preflight-preview-scale {
-            transform-origin: center center;
-            transition: transform 0.2s;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform-origin: 50% 50%;
+            transition: transform 0.05s linear;
             display: flex; justify-content: center;
         }
         #preflight-doc-container {
@@ -604,7 +609,7 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.15); position: relative;
         }
         .print-sheet .page { box-shadow: none; margin: 0; }
-        .show-fold-marks .print-sheet::after {
+        .print-sheet.show-fold-marks::after {
             content: ''; position: absolute;
             top: 0; bottom: 0; left: 50%;
             border-left: 1px dashed rgba(0,0,0,0.6);
@@ -636,7 +641,7 @@
             /* Special handling for sheets (2-up/Booklet) */
             .print-sheet { box-shadow: none !important; margin: 0 !important; page-break-after: always !important; break-after: page !important; }
             .print-sheet .page { page-break-after: avoid !important; }
-            .show-fold-marks .print-sheet::after { border-left: 1px dashed #000; }
+            .print-sheet.show-fold-marks::after { border-left: 1px dashed #000; }
         }
     </style>
 </head>
@@ -995,7 +1000,7 @@
                     </select>
                 </div>
                 
-                <div class="control-group checkbox-row" id="pf-marks-group" style="margin-top: 8px;">
+                <div class="control-group checkbox-row" id="pf-marks-group" style="margin-top: -8px;">
                     <input type="checkbox" id="pf-fold-marks" checked>
                     <label for="pf-fold-marks">Add Fold Marks (Center)</label>
                 </div>
@@ -1029,6 +1034,14 @@
                 this.isPanning = false;
                 this.startX = 0;
                 this.startY = 0;
+
+                // Preflight State
+                this.pfScale = 1;
+                this.pfTranslateX = 0;
+                this.pfTranslateY = 0;
+                this.pfIsPanning = false;
+                this.pfStartX = 0;
+                this.pfStartY = 0;
 
                 // Document Data
                 this.tocTextBlocks = [];
@@ -1174,6 +1187,13 @@
                 this.canvas.style.transform = `translate(calc(-50% + ${this.translateX}px), calc(-50% + ${this.translateY}px)) scale(${this.scale})`;
             }
 
+            updatePFCanvasTransform() {
+                const pfScaleWrapper = document.getElementById('preflight-preview-scale');
+                if (pfScaleWrapper) {
+                    pfScaleWrapper.style.transform = `translate(calc(-50% + ${this.pfTranslateX}px), calc(-50% + ${this.pfTranslateY}px)) scale(${this.pfScale})`;
+                }
+            }
+
             initPIPEditor() {
                 document.execCommand('defaultParagraphSeparator', false, 'p');
 
@@ -1287,6 +1307,7 @@
                 const pfDoc = document.getElementById('preflight-doc-container');
                 const btnPrint = document.getElementById('pf-print-btn');
                 const originalBtnExport = document.getElementById('btn-export');
+                const pfArea = document.getElementById('pf-preview-area');
                 
                 const createSheet = (marks) => {
                     const div = document.createElement('div');
@@ -1362,11 +1383,12 @@
                     // Scale to fit preview window
                     setTimeout(() => {
                         const area = document.getElementById('pf-preview-area');
-                        const scaleWrapper = document.getElementById('preflight-preview-scale');
                         const scaleX = (area.clientWidth - 100) / pfDoc.scrollWidth;
                         const scaleY = (area.clientHeight - 100) / pfDoc.scrollHeight;
-                        const finalScale = Math.min(scaleX, scaleY, 1);
-                        scaleWrapper.style.transform = `scale(${finalScale})`;
+                        this.pfScale = Math.min(scaleX, scaleY, 1);
+                        this.pfTranslateX = 0;
+                        this.pfTranslateY = 0;
+                        this.updatePFCanvasTransform();
                     }, 50);
                 };
                 
@@ -1435,6 +1457,43 @@
                     // Export Direct assumes Single Page
                     triggerPrint('single', false);
                 });
+
+                // Zoom and Pan logic for Preflight
+                pfArea.addEventListener('mousedown', (e) => {
+                    this.pfIsPanning = true;
+                    this.pfStartX = e.clientX - this.pfTranslateX;
+                    this.pfStartY = e.clientY - this.pfTranslateY;
+                });
+                window.addEventListener('mouseup', () => this.pfIsPanning = false);
+                window.addEventListener('mousemove', (e) => {
+                    if (!this.pfIsPanning || modal.style.display === 'none') return;
+                    this.pfTranslateX = e.clientX - this.pfStartX;
+                    this.pfTranslateY = e.clientY - this.pfStartY;
+                    this.updatePFCanvasTransform();
+                });
+                pfArea.addEventListener('wheel', (e) => {
+                    if (modal.style.display === 'none') return;
+                    e.preventDefault();
+                    if (e.ctrlKey || e.metaKey) {
+                        const rect = pfArea.getBoundingClientRect();
+                        const mouseX = e.clientX - rect.left - rect.width / 2;
+                        const mouseY = e.clientY - rect.top - rect.height / 2;
+
+                        const zoomFactor = 0.05;
+                        const direction = e.deltaY < 0 ? 1 : -1;
+                        const newScale = Math.max(0.05, Math.min(this.pfScale + direction * zoomFactor, 5));
+                        
+                        const scaleRatio = newScale / this.pfScale;
+                        this.pfTranslateX = mouseX - (mouseX - this.pfTranslateX) * scaleRatio;
+                        this.pfTranslateY = mouseY - (mouseY - this.pfTranslateY) * scaleRatio;
+                        
+                        this.pfScale = newScale;
+                    } else {
+                        this.pfTranslateX -= e.deltaX;
+                        this.pfTranslateY -= e.deltaY;
+                    }
+                    this.updatePFCanvasTransform();
+                }, { passive: false });
             }
 
             initUIListeners() {
