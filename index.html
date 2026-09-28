@@ -444,38 +444,6 @@
             padding-left: 14pt;
             list-style-type: none;
         }
-        .page li { 
-            margin-bottom: 4pt; 
-            break-inside: avoid; /* Prevent awkward breaks inside TOC chapters */
-        }
-        .page ul li::marker { content: var(--bullet-char); color: var(--primary-blue); }
-
-        .grid-overlay {
-            position: absolute;
-            top: var(--m-top); left: var(--m-inside); right: var(--m-outside); bottom: var(--m-bottom);
-            pointer-events: none;
-            display: none;
-            grid-template-columns: repeat(var(--guide-cols), 1fr);
-            grid-template-rows: repeat(var(--guide-rows), 1fr);
-            column-gap: var(--guide-cgutter);
-            row-gap: var(--guide-rgutter);
-            z-index: 100;
-        }
-        .facing-enabled .page:nth-child(odd) .grid-overlay { left: var(--m-inside); right: var(--m-outside); }
-        .facing-enabled .page:nth-child(even) .grid-overlay { left: var(--m-outside); right: var(--m-inside); }
-        .facing-disabled .page .grid-overlay { left: var(--m-inside); right: var(--m-outside); }
-        
-        .show-guides .grid-overlay { display: grid; }
-        .grid-overlay .grid-cell { border: 1px solid var(--guide-color); }
-        .grid-overlay .grid-cell::after { content: ''; display: block; width: 100%; height: 100%; background-color: var(--guide-fill-color); }
-
-        /* Baseline Grid Implementation */
-        .show-baseline .page-content {
-            background-image: linear-gradient(to bottom, var(--baseline-color) 1px, transparent 1px);
-            background-size: 100% var(--base-leading);
-            background-position: left calc(1em - 1px);
-        }
-
         /* Page Numbering */
         .page-number {
             position: absolute;
@@ -488,6 +456,38 @@
         .facing-enabled .page:nth-child(even) .page-number { left: var(--m-outside); }
         .facing-disabled .page .page-number { right: var(--m-outside); }
 
+        /* Preflight Modal */
+        #preflight-modal {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.4); backdrop-filter: blur(2px); z-index: 2000;
+            display: none; justify-content: center; align-items: center;
+            opacity: 0; transition: opacity 0.2s ease;
+        }
+        #preflight-modal.visible {
+            display: flex;
+            opacity: 1;
+        }
+        .modal-card {
+            background: var(--ui-card); width: 420px; border-radius: 6px;
+            box-shadow: 0 15px 50px rgba(0,0,0,0.2); overflow: hidden;
+            display: flex; flex-direction: column;
+            transform: translateY(10px); transition: transform 0.2s ease;
+        }
+        #preflight-modal.visible .modal-card { transform: translateY(0); }
+        .modal-header {
+            padding: 16px 20px; background: var(--ui-panel);
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 600; font-size: 13px; text-transform: uppercase;
+            letter-spacing: 0.5px; color: var(--ui-text);
+        }
+        .modal-body { padding: 24px 20px; display: flex; flex-direction: column; gap: 16px; }
+        .modal-footer {
+            padding: 16px 20px; background: #fafafa;
+            border-top: 1px solid var(--border-color);
+            display: flex; justify-content: flex-end; gap: 12px;
+        }
+
+        /* Toggle Extras Logic */
         body.hide-extras .grid-overlay { display: none !important; }
         body.hide-extras .page-content { background-image: none !important; }
 
@@ -602,7 +602,7 @@
         /* Flawless Native Print Export */
         @media print {
             body, html { height: auto !important; overflow: visible !important; background: white !important; margin: 0; padding: 0; }
-            #ui-panel, #pip-editor, #unfold-btn, #unfold-tooltip { display: none !important; }
+            #ui-panel, #pip-editor, #unfold-btn, #unfold-tooltip, .modal-overlay { display: none !important; }
             #workspace { background: none !important; overflow: visible !important; position: static !important; display: block !important; }
             #canvas { position: static !important; transform: none !important; display: block !important; }
             #document-container { padding: 0 !important; width: 100% !important; display: block !important; }
@@ -611,10 +611,35 @@
                 box-shadow: none !important; 
                 border: none !important; 
                 page-break-after: always !important; 
-                break-after: page !important; 
+        /* WYSIWYG Styling inside PIP */
+        #pip-content h1 { font-size: 20px; font-weight: 700; margin-bottom: 10px; color: #fff; }
+        #pip-content h2 { font-size: 16px; font-weight: 600; margin: 15px 0 8px; color: #fff; }
+        #pip-content h3 { font-size: 14px; font-weight: 600; margin: 12px 0 6px; color: #ccc; }
+        #pip-content p { margin-bottom: 10px; }
+        #pip-content ul { margin-left: 20px; margin-bottom: 10px; list-style-type: disc; }
+
+        /* Imposition Print Fixes */
+        @media print {
+            body.print-booklet #document-container {
+                display: flex !important; flex-wrap: wrap !important;
+                flex-direction: row !important; align-items: flex-start !important;
+                justify-content: flex-start !important; padding: 0 !important;
             }
-            .grid-overlay { display: none !important; }
-            .show-baseline .page-content { background-image: none !important; }
+            body.print-booklet .sheet {
+                display: flex !important; flex-direction: row !important;
+                width: 100% !important; height: 100% !important;
+                page-break-after: always !important; break-after: page !important;
+                position: relative !important; margin: 0 !important; padding: 0 !important;
+                box-shadow: none !important;
+            }
+            body.print-booklet .page {
+                page-break-after: avoid !important; break-after: avoid !important;
+                margin: 0 !important; box-shadow: none !important;
+            }
+            body.print-marks .sheet::after {
+                content: ''; position: absolute; left: 50%; top: -5mm; bottom: -5mm;
+                border-left: 0.5pt dashed #1a1a1a; pointer-events: none; z-index: 100;
+            }
         }
     </style>
 </head>
@@ -954,7 +979,7 @@
 
         <!-- 3. Export -->
         <details class="accordion">
-            <summary>3. Output <span class="arrow"></span></summary>
+            <summary>EXPORT <span class="arrow"></span></summary>
             <div class="accordion-content">
                 <div class="gestalt-card">
                     <div class="control-group">
@@ -965,26 +990,24 @@
                         <label>Compatibility</label>
                         <select><option>PDF/X-4:2010 (Acrobat 7)</option></select>
                     </div>
-                    <button id="btn-export" class="primary-btn">EXPORT</button>
+                    <button id="btn-open-preflight" class="primary-btn">Preflight & Export</button>
                 </div>
             </div>
         </details>
     </aside>
 
     <main id="workspace">
-        <div id="canvas" style="transform: translate(calc(-50% - 93px), calc(-50% + 623px)) scale(0.65);">
-            <div id="document-container" lang="de" class="facing-enabled show-guides show-baseline"><div class="page"><div class="page-content"></div><div class="grid-overlay"><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div></div><div class="page-number">1</div></div><div class="page"><div class="page-content"></div><div class="grid-overlay"><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div></div><div class="page-number">2</div></div><div class="page"><div class="page-content"><h1>Inhaltsverzeichnis</h1><ul style="--bullet-char: &quot;• &quot;; padding-left: 14pt;"><li>I. Warum Mietkampfgruppen?&nbsp;</li><li>II. Das ist eine Mietkampfgruppe und das will sie erreichen</li><li>III. So arbeitet die Mietkampfgruppe&nbsp;</li><li style="margin-left: 12pt;">Finanzen und rechtliche Rahmenbedingungen</li><li style="margin-left: 12pt;">Unterstützung und Mietkampfversammlung</li><li style="margin-left: 12pt;">Unabhängigkeit und Werte</li><li>IV. So startest du eine Mietkampfgruppe&nbsp;</li><li>V. Tipps und Hinweise für eure gemeinsame Arbeit&nbsp;</li><li style="margin-left: 12pt;">Vor dem Treffen:&nbsp;</li><li style="margin-left: 12pt;">Während des Treffens:&nbsp;</li><li style="margin-left: 12pt;">Grundsatz: Worauf zu achten ist</li><li style="margin-left: 12pt;">Weiterführende Ressourcen:</li><li>VI. Eskalationsstufen für den Mietkampf&nbsp;</li><li style="margin-left: 12pt;">Stufe 1 (Vorbereitung):&nbsp;</li><li style="margin-left: 12pt;">Stufe 2 (1. Woche):&nbsp;</li><li style="margin-left: 12pt;">Stufe 3 (3. Woche):&nbsp;</li><li style="margin-left: 12pt;">Stufe 4 (ab 5. Woche):&nbsp;</li><li style="margin-left: 12pt;">Stufe 5 (Nach Bedarf):&nbsp;</li><li style="margin-left: 12pt;">Stufe 6 (Nach Bedarf):&nbsp;</li><li style="margin-left: 12pt;">Stufe 7 (Nach Bedarf):&nbsp;</li><li>VII. Mögliche Aktionsformen&nbsp;</li><li style="margin-left: 12pt;">1. Schreiben mit Androhung von Öffentlichkeitsarbeit&nbsp;</li><li style="margin-left: 12pt;">2. Telefonkampagnen&nbsp;</li><li style="margin-left: 12pt;">3. Delegation&nbsp;</li></ul></div><div class="grid-overlay"><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div></div><div class="page-number">3</div></div><div class="page"><div class="page-content"><ul style="--bullet-char: &quot;• &quot;; padding-left: 14pt;"><li style="margin-left: 12pt;">4. Flyer verteilen&nbsp;</li><li style="margin-left: 12pt;">5. Pressekonferenz&nbsp;</li><li style="margin-left: 12pt;">6. Postkartenaktion&nbsp;</li><li style="margin-left: 12pt;">7. Banner-Aktion&nbsp;</li><li style="margin-left: 12pt;">8. Kundgebung&nbsp;</li><li style="margin-left: 12pt;">9. Besetzung von Büros&nbsp;</li><li style="margin-left: 12pt;">10. Mietkürzungen und Mietstreiks&nbsp;</li><li>VIII. Kontakt <br>bei Fragen&nbsp;</li></ul></div><div class="grid-overlay"><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div></div><div class="page-number">4</div></div><div class="page"><div class="page-content"><h1>I. Warum Mietkampfgruppen?&nbsp;</h1><p>Wir als Mietgewerkschaft wollen zusammen als Nachbarschaft im Stadtteil Strukturen entwickeln, mit denen wir in der Lage sind, gemeinsam gegen die alltäglichen Zumutungen der kapitalistischen Gesellschaft zu kämpfen. Wir verfolgen also nicht (nur) das Ziel, Einzelnen mit individuellen Problemen zu helfen. Stattdessen bieten wir Strukturen an, um sich an Mietkämpfen und Ähnlichem zu beteiligen.</p><p>Die Mietgewerkschaft Leipzig ist also vor allem darauf ausgelegt, Mietkämpfe und Anliegen von Mieter*innen zusammenzulegen und dann gemeinsam gegen die Ungerechtigkeiten vorzugehen. Wir wollen somit eine Plattform sein, über die sich Menschen kennenlernen und über die sie möglicherweise auch kommunizieren und sich im Kampf gegen Vermieter und Immobilienkonzerne verbünden können. Dafür schlagen wir als zentrales Organ der Mietgewerkschaft die Mietkampfgruppen vor. Was genau die Mietkampfgruppen sind und wie sie funktionieren, erfahrt ihr in dieser Broschüre.</p><h1>II. Das ist eine Mietkampfgruppe und das will sie erreichen</h1><p>In den Mietkampfgruppen finden sich Menschen zusammen, die sich entlang eines Mietstreits mit einer Hausverwaltung oder Eigentümer verbünden und gemeinsam dagegen vorgehen möchten. Das können also direkte Nachbar*innen sein, aber auch andere Menschen im Viertel, die die gleiche Hausverwaltung und/oder Eigentümer haben.</p></div><div class="grid-overlay"><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div></div><div class="page-number">5</div></div><div class="page"><div class="page-content"><p>Wenn du und deine direkten Nachbar*innen in deinem Haus also Probleme mit eurer Hausverwaltung und/oder eurer Eigentümer habt, könnt ihr euch als Hausgemeinschaft oder gemeinsam mit anderen Menschen, die die gleiche Hausverwaltung und/oder Eigentümer haben, in einer Mietkampfgruppe organisieren. So könnt ihr euch im Kampf gegen die Ungerechtigkeiten gegenseitig unterstützen und zusammen Strategien entwickeln. Wenn ihr dann Druck auf die Hausverwaltung und/oder Eigentümer aufbaut, hat das natürlich viel mehr Schlagkraft, als wenn ihr alleine dagegen ankämpft. Kurzgesagt: In den Mietkampfgruppen werden Anliegen und Mietkämpfe von Mieter*innen zusammengelegt und die Mietkämpfe durchgeführt.</p><p>Wichtig ist, dass die Mietkampfgruppen dabei auf Langfristigkeit ausgelegt sind und über ein bestimmtes Problem (wie zum Beispiel zu hohe Nebenkostenabrechnungen) hinaus existieren sollen. Es geht also nicht nur darum, sich im Kampf gegen Vermieter*innen zusammenzutun, sondern auch darum, die Nachbarschaftsgemeinschaft zu stärken. Die Mietkampfgruppen können also auch dazu da sein, sich gegenseitig als Nachbar*innen besser kennenzulernen und gemeinsam schöne Zeit zusammen zu verbringen! So kann im besten Fall das Gemeinschaftsgefühl gestärkt werden und ihr als Nachbar*innen könnt euch bei Bedarf über Mietangelegenheiten hinaus unterstützen.</p><h1>III. So arbeitet die Mietkampfgruppe&nbsp;</h1></div><div class="grid-overlay"><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div></div><div class="page-number">6</div></div><div class="page"><div class="page-content"><p>Die Mietkampfgruppe arbeitet grundlegend eigenständig. Sie kann sich zum Beispiel selbst aussuchen, wie oft sie sich trifft und wie ihre Treffen ablaufen. Sie ist allerdings dazu angehalten, sich im Sinne der Arbeitsweise und Grundsätze sowie den Prinzipien des Miteinanders der Mietgewerkschaft zu organisieren (basisdemokratische Organisierung, Langfristigkeit, realistische Einschätzung unserer Zeit, Flexibilität, Konfliktkultur, Offenheit, Feedbackkultur, Gemeinsame Ziele, mehr dazu in der Broschüre "Willkommen in der Mietgewerkschaft").</p><p>Die Mietkampfgruppe arbeitet nach dem Eskalationsstufenmodell. Was genau das heißt und was mögliche Aktionsformen für den Mietkampf sind, findet ihr in dieser Broschüre im entsprechenden Kapitel.</p><h2>Finanzen und rechtliche Rahmenbedingungen</h2><p>Wenn eine Mietkampfgruppe strafrechtlich relevante Aktionen plant, ist das mit der Vollversammlung abzusprechen. Die Mietkampfgruppen können Geld von der Mietgewerkschaft bekommen, wenn dies für bestimmte Aktionen wie zum Beispiel das Drucken von Flyern benötigt wird. Sollte das Geld zur Verfügung stehen, werden 50  pro Aktion (gedeckelt auf 250  pro Mietkampfgruppe im Jahr) vom Buchführungs- und Kassenmandat bewilligt, wenn die Aktion im Einklang mit dem Konzept der Mietgewerkschaft steht. Für Anträge über mehr Geld oder wenn das Mandat unsicher ist, ob die Aktion im Einklang mit dem Konzept steht, wird das Anliegen auf der Vollversammlung besprochen und im Wege des Mehrheitsentscheids entschieden.</p><h2>Unterstützung und Mietkampfversammlung</h2></div><div class="grid-overlay"><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div></div><div class="page-number">7</div></div><div class="page"><div class="page-content"><p>Zu Beginn können auch Leute, die in der Mietgewerkschaft aktiv sind, aber keine direkten Nachbar*innen sind, Teil einer Mietkampfgruppe werden, um sie beim Aufbau zu unterstützen. Die Mietkampfgruppe kann sich mit Fragen immer an die Gewerkschaft wenden. Es gibt außerdem ein Mietkampfmandat, also eine Person, die den Überblick über die laufenden Mietkämpfe und die Mietkampfversammlungen hat und die erste Ansprechperson für die Mietkampfgruppen ist.</p><p>Strategiefragen, Schwierigkeiten und Herausforderungen in der Mietkampfgruppe können bei der monatlichen Mietkampfversammlung besprochen werden. Alle Mietkampfgruppen sind verpflichtet, eine Person zu diesen Versammlungen zu schicken, die über den Gang des Mietkampfes berichtet. Die Versammlungen dauern maximal 1,5 Stunden, werden moderiert und protokolliert. Im Anschluss gibt es Raum für informellen Austausch bei Snacks und Getränken.</p><h2>Unabhängigkeit und Werte</h2><p>Als Mietgewerkschaft setzen wir auf unabhängige, außerparlamentarische Strukturen. Wir spielen nicht nach den Regeln politischer Parteien, um unbeeinflussbar und unkäuflich zu bleiben. Parteien sehen wir nicht als zuverlässige Verbündete an, da sie durch Sachzwänge nicht unabhängig handeln können. Wir arbeiten zudem nicht mit Gruppen zusammen, die grundlegend unseren emanzipatorischen Werten widersprechen. Diese Grundsätze gelten uneingeschränkt auch für alle Mietkampfgruppen.</p><h1>IV. So startest du eine Mietkampfgruppe&nbsp;</h1></div><div class="grid-overlay"><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div></div><div class="page-number">8</div></div><div class="page"><div class="page-content"><p>1. Ersten Kontakt knüpfen: 
-Nimm zuerst Kontakt zu deinen Nachbar*innen auf. Du kannst bei ihnen klingeln und sie fragen, wie es ihnen mit der Hausverwaltung und/oder den Eigentümern geht. Erstelle z. B. eine WhatsApp-Gruppe für den einfacheren Austausch. Ein QR-Code mit dem Einladungslink im Treppenhaus hilft, alle zu erreichen.</p><p>2. Erstes Treffen organisieren: 
-Lade zu einem unverbindlichen Kennenlernen ein das muss kein strukturiertes Treffen sein. Ein gemeinsames Grillen im Hof oder Waffelessen im Wohnzimmer bietet einen guten Rahmen, um über die Wohnsituation und die Idee der Mietgewerkschaft zu sprechen.</p><p>3. Offizielle Gründung: 
-Wenn ihr euch entscheidet, eine Mietkampfgruppe zu werden, schließt jeweils als Einzelpersonen eine Mitgliedschaft bei der Mietgewerkschaft ab und besucht die nächste Mietkampfversammlung. Dort stellt ihr euch und euer Anliegen vor. Damit seid ihr offiziell gegründet und Teil der Mietgewerkschaft. Neumitglieder sind zudem herzlich zur alle drei Monate stattfindenden Einführungsveranstaltung eingeladen.</p><h1>V. Tipps und Hinweise für eure gemeinsame Arbeit&nbsp;</h1><h2>Vor dem Treffen:&nbsp;</h2><p>• Termin &amp; Ort: Nutzt Termin-Abstimmungs-Tools in eurer Chatgruppe. Wählt zugängliche Orte wie Wohnzimmer, Gemeinschaftsräume oder den Hinterhof.</p><p>• Rollenverteilung: Legt vorab fest, wer das Treffen vorbereitet, wer moderiert und wer protokolliert.</p></div><div class="grid-overlay"><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div></div><div class="page-number">9</div></div><div class="page"><div class="page-content"><p>• Tagesordnung: Verschriftlicht eine Tagesordnung mit allen Sammelpunkten und plant bewusst Pausen ein.</p><h2>Während des Treffens:&nbsp;</h2><p>1. Ankommen &amp; Vorstellen: Kurze Runde zum Kennenlernen oder Abfragen des aktuellen Befindens.</p><p>2. Problemerfassung: Konkrete Themen sammeln, die euch als Nachbar*innen beschäftigen.</p><p>3. Strategieentwicklung: Gemeinsam passende Aktionsformen und Schritte diskutieren.</p><p>4. Aufgaben verteilen: Erstklassige Klarheit schaffen, wer welche Aufgaben bis zum nächsten Mal übernimmt.</p><p>5. Nächster Termin: Direkt den nächsten Termin sowie Moderation/Protokoll festlegen.</p><p>Tipp: Haltet Treffen zugänglich und angenehm durch Kinderbetreuung, Snacks oder ein getränk im Anschluss!</p><h2>Grundsatz: Worauf zu achten ist</h2><p>Ausgewogenheit: Achtet gemeinsam darauf, dass alle zu Wort kommen; ermutigt leise Personen.</p><p>Fokussierung: Verliert euch nicht in Diskussionen über Detailfragen einzelner Personen.</p><p>Kollektivität: Stellt sicher, dass Entscheidungen von der ganzen Gruppe getragen werden.</p></div><div class="grid-overlay"><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div></div><div class="page-number">10</div></div><div class="page"><div class="page-content"><h2>Weiterführende Ressourcen:</h2><p>• Organizing-Handbuch der Mieter*innengewerkschaft Madrid (S. 23 ff.)</p><p>• Organizing-Werkzeugkasten "Gute Treffen Wachsende Gruppen" der Bewegungsschule</p><h1>VI. Eskalationsstufen für den Mietkampf&nbsp;</h1><p>Wir arbeiten nach einem Eskalationsstufenmodell. Das bedeutet, dass wir an Hausverwaltungen und Eigentümer Forderungen stellen und mit unterschiedlichen Aktionsformen steigend mehr Druck aufbauen.</p><p>Wichtig: Vor Beginn müsst ihr klare, eindeutige Forderungen formulieren. Diese bilden die Basis und sollten während des Kampfes möglichst nicht stark verändert werden.</p><h2>Stufe 1 (Vorbereitung):&nbsp;</h2><p>Konkrete Forderungen formulieren, schriftlich festhalten und in der Gruppe beschließen.</p><h2>Stufe 2 (1. Woche):&nbsp;</h2><p>Höfliches Schreiben mit Fristsetzung im Namen der Mietkampfgruppe an die Vermietung senden.</p><h2>Stufe 3 (3. Woche):&nbsp;</h2></div><div class="grid-overlay"><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div></div><div class="page-number">11</div></div><div class="page"><div class="page-content"><p>Zweites Anschreiben mit juristischer Sprache &amp; Androhung von Öffentlichkeitsarbeit (oder Übergabe als Delegation).</p><h2>Stufe 4 (ab 5. Woche):&nbsp;</h2><p>Öffentliche Aktionen starten (Flyer, Postkarten, Telefonkampagne, Kundgebung, Banner).</p><h2>Stufe 5 (Nach Bedarf):&nbsp;</h2><p>Direktere Aktionsformen (Absprache mit dem Mietkampfmandat erforderlich).</p><h2>Stufe 6 (Nach Bedarf):&nbsp;</h2><p>Formelle Androhung einer Mietkürzung oder eines Mietstreiks.</p><h2>Stufe 7 (Nach Bedarf):&nbsp;</h2><p>Durchführung einer Mietkürzung oder eines Mietstreiks.</p><h1>VII. Mögliche Aktionsformen&nbsp;</h1><h2>1. Schreiben mit Androhung von Öffentlichkeitsarbeit&nbsp;</h2><p>Ein Brief an die Vermietung, der Forderungen erneut auflistet und ankündigt, diese öffentlichkeitswirksam durchzusetzen.</p></div><div class="grid-overlay"><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div></div><div class="page-number">12</div></div><div class="page"><div class="page-content"><p>• Sinnvoll wenn: Ihr am Anfang steht, Stärke zeigen und der Vermietung signalisieren wollt, dass eine Organisation hinter euch steht.</p><p>• Orga: 1-2 Personen setzen das Schreiben auf. Nach Zustimmung der Gruppe per Post senden oder als Delegation übergeben.</p><h2>2. Telefonkampagnen&nbsp;</h2><p>• Sinnvoll für: Schnelle Ergebnisse und die Demonstration breiter Unterstützung (1-2 Orga-Personen, 10-25 Anrufende).</p><p>• Durchführung: Erstellt ein Skript (2-4 Sätze, z. B. "Ich fordere, dass Sie mit den Mieter*innen verhandeln..."). Verbreitet die Telefonnummer und das Zeitfenster (morgens/mittags, 2-3 Std.) per SharePic oder Flyer. Bei Verweigerung können SMS gesendet werden.</p><h2>3. Delegation&nbsp;</h2><p>Eine Gruppe überbringt persönlich eine Botschaft im Büro oder an der Haustür der Vermietung (optimal: 7-12 Personen).</p><p>• Vorbereitung: Betroffene Mieter*innen sollten das Schreiben überreichen. Spielt mögliche Szenarien vorher durch (Wut, Verweis vom Grundstück, Spaltungsversuche). Tretet geschlossen und selbstbewusst auf. Bringt Schilder, Transparente und Flyer mit.</p><h2>4. Flyer verteilen&nbsp;</h2><p>• Sinnvoll für: Schnelle Aktionen in der Nachbarschaft (ca. 150 Kopien) oder als Begleitung von Kundgebungen und Delegationen (5-7 Personen zum Verteilen).</p></div><div class="grid-overlay"><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div></div><div class="page-number">13</div></div><div class="page"><div class="page-content"><p>• Wichtig: Alle Informationen strikt sachlich halten, um Verleumdungsklagen zu vermeiden. Bei Rechtsunsicherheiten Rücksprache mit der Mietkampfversammlung oder der "Gruppe für schnelle Entscheidungen" halten.</p><h2>5. Pressekonferenz&nbsp;</h2><p>• Sinnvoll bei: Aktionen oder Gerichtsterminen, um medialen Druck aufzubauen.</p><p>• Orga: Mehrere Redner*innen (max. 5 Min. pro Beitrag). Verfasst eine Pressemitteilung mit fetten Rahmendaten (mind. 48 Std. vorher versenden). Übt das Beantworten möglicher Fragen vorab.</p><h2>6. Postkartenaktion&nbsp;</h2><p>• Sinnvoll bei: Kleinere Vermieter*innen/Eigentümer.</p><p>• Durchführung: Eindringliche Motive (z. B. Fotos von Mängeln) wählen. Postkarten von vielen Unterstützer*innen unterschreiben lassen und gestaffelt versenden, damit täglich neue Post beim Vermieter eingeht.</p><h2>7. Banner-Aktion&nbsp;</h2><p>• Sinnvoll für: Kundgebungen, Demos oder direkte Sichtbarkeit am Gebäude.</p><p>• Durchführung: Prägnanten Spruch entwerfen, Digitaldesign mittels Beamer auf Leinwand übertragen und ausmalen. Am oberen Rand Ösen/Seile anbringen, unten Beschwerung (z. B. Stöcke/Sandsäcke) befestigen.</p><h2>8. Kundgebung&nbsp;</h2></div><div class="grid-overlay"><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div></div><div class="page-number">14</div></div><div class="page"><div class="page-content"><p>• Sinnvoll bei: Verweigerung der Vermietung, um Aufmerksamkeit und Geschlossenheit zu zeigen.</p><p>• Orga: 1-2 Wochen Vorlauf, 3-5 Orga-Personen. Kundgebung mindestens 48 Stunden vorher bei der Versammlungsbehörde anmelden (in Leipzig online möglich). Versammlungsleitung und Motto benennen.</p><h2>9. Besetzung von Büros&nbsp;</h2><p>Belagerung der Räumlichkeiten der Hausverwaltung/Vermietung bis zur Verhandlungsbereitschaft. Beratung zu historischen Beispielen und Vorgehen erfolgt über das Mietkampfmandat.</p><h2>10. Mietkürzungen und Mietstreiks&nbsp;</h2><p>Die zeitweise Einbehaltung von Teilen oder der gesamten Miete.</p><p>• Voraussetzungen: Hoher Organisationsgrad unter den Mieter*innen, Verhandlungsverweigerung der Gegenseite, hohe Risikobereitschaft aller Beteiligten.</p><p>• Mögliche Konsequenzen: Bei Rückständen von zwei Monatsmieten droht die fristlose Kündigung und Räumungsklage. Eine Kündigung ist jedoch unwirksam, wenn Mietmängel vorliegen oder die Miete innerhalb von 2 Monaten nach Klageerhebung nachgezahlt wird.</p><p>• Durchführung: Ausführliche Beratung auf der Mietkampfversammlung, Vorankündigung von 2 Wochen an den Vermieter, begleitende intensive Öffentlichkeitsarbeit.</p><h1>VIII. Kontakt 
-bei Fragen&nbsp;</h1></div><div class="grid-overlay"><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div></div><div class="page-number">15</div></div><div class="page"><div class="page-content"><p>Bei allen allgemeinen und internen Fragen wendet euch an die zentrale Kontaktstelle:</p><p>• E-Mail Kontaktstelle: kontaktstelle_mietgew_le@systemli.org</p><p>Bei spezifischen Anliegen zu Mietkämpfen, Strategien und Eskalationsstufen ist das Mietkampfmandat eure erste Ansprechperson.</p></div><div class="grid-overlay"><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div></div><div class="page-number">16</div></div></div>
+        <div id="canvas">
+            <div id="document-container" lang="de" class="facing-enabled show-guides show-baseline">
+                <!-- Pages flow here -->
+            </div>
         </div>
     </main>
 
     <!-- PIP Text Editor -->
-    <aside id="pip-editor" class="open active">
+    <aside id="pip-editor">
         <header>
-            <h2>Text &amp; Style Editor</h2>
+            <h2>Text & Style Editor</h2>
             <span>Click outside to close</span>
         </header>
         <div id="pip-toolbar">
@@ -997,12 +1020,35 @@ bei Fragen&nbsp;</h1></div><div class="grid-overlay"><div class="grid-cell"></di
             <button class="pip-btn" id="btn-page-break" title="Force text to next page">Page Break</button>
             <button class="pip-btn" id="btn-save-text" title="Download text as .html to save formatting" style="margin-left: auto; background-color: var(--primary-blue);">↓ Save</button>
         </div>
-        <div id="pip-content" contenteditable="true" spellcheck="false"><h1>I. Warum Mietkampfgruppen?&nbsp;</h1><p>Wir als Mietgewerkschaft wollen zusammen als Nachbarschaft im Stadtteil Strukturen entwickeln, mit denen wir in der Lage sind, gemeinsam gegen die alltäglichen Zumutungen der kapitalistischen Gesellschaft zu kämpfen. Wir verfolgen also nicht (nur) das Ziel, Einzelnen mit individuellen Problemen zu helfen. Stattdessen bieten wir Strukturen an, um sich an Mietkämpfen und Ähnlichem zu beteiligen.</p><p>Die Mietgewerkschaft Leipzig ist also vor allem darauf ausgelegt, Mietkämpfe und Anliegen von Mieter*innen zusammenzulegen und dann gemeinsam gegen die Ungerechtigkeiten vorzugehen. Wir wollen somit eine Plattform sein, über die sich Menschen kennenlernen und über die sie möglicherweise auch kommunizieren und sich im Kampf gegen Vermieter und Immobilienkonzerne verbünden können. Dafür schlagen wir als zentrales Organ der Mietgewerkschaft die Mietkampfgruppen vor. Was genau die Mietkampfgruppen sind und wie sie funktionieren, erfahrt ihr in dieser Broschüre.</p><h1>II. Das ist eine Mietkampfgruppe und das will sie erreichen</h1><p>In den Mietkampfgruppen finden sich Menschen zusammen, die sich entlang eines Mietstreits mit einer Hausverwaltung oder Eigentümer verbünden und gemeinsam dagegen vorgehen möchten. Das können also direkte Nachbar*innen sein, aber auch andere Menschen im Viertel, die die gleiche Hausverwaltung und/oder Eigentümer haben.</p><p>Wenn du und deine direkten Nachbar*innen in deinem Haus also Probleme mit eurer Hausverwaltung und/oder eurer Eigentümer habt, könnt ihr euch als Hausgemeinschaft oder gemeinsam mit anderen Menschen, die die gleiche Hausverwaltung und/oder Eigentümer haben, in einer Mietkampfgruppe organisieren. So könnt ihr euch im Kampf gegen die Ungerechtigkeiten gegenseitig unterstützen und zusammen Strategien entwickeln. Wenn ihr dann Druck auf die Hausverwaltung und/oder Eigentümer aufbaut, hat das natürlich viel mehr Schlagkraft, als wenn ihr alleine dagegen ankämpft. Kurzgesagt: In den Mietkampfgruppen werden Anliegen und Mietkämpfe von Mieter*innen zusammengelegt und die Mietkämpfe durchgeführt.</p><p>Wichtig ist, dass die Mietkampfgruppen dabei auf Langfristigkeit ausgelegt sind und über ein bestimmtes Problem (wie zum Beispiel zu hohe Nebenkostenabrechnungen) hinaus existieren sollen. Es geht also nicht nur darum, sich im Kampf gegen Vermieter*innen zusammenzutun, sondern auch darum, die Nachbarschaftsgemeinschaft zu stärken. Die Mietkampfgruppen können also auch dazu da sein, sich gegenseitig als Nachbar*innen besser kennenzulernen und gemeinsam schöne Zeit zusammen zu verbringen! So kann im besten Fall das Gemeinschaftsgefühl gestärkt werden und ihr als Nachbar*innen könnt euch bei Bedarf über Mietangelegenheiten hinaus unterstützen.</p><hr id="null"><h1>III. So arbeitet die Mietkampfgruppe&nbsp;</h1><p>Die Mietkampfgruppe arbeitet grundlegend eigenständig. Sie kann sich zum Beispiel selbst aussuchen, wie oft sie sich trifft und wie ihre Treffen ablaufen. Sie ist allerdings dazu angehalten, sich im Sinne der Arbeitsweise und Grundsätze sowie den Prinzipien des Miteinanders der Mietgewerkschaft zu organisieren (basisdemokratische Organisierung, Langfristigkeit, realistische Einschätzung unserer Zeit, Flexibilität, Konfliktkultur, Offenheit, Feedbackkultur, Gemeinsame Ziele, mehr dazu in der Broschüre "Willkommen in der Mietgewerkschaft").</p><p>Die Mietkampfgruppe arbeitet nach dem Eskalationsstufenmodell. Was genau das heißt und was mögliche Aktionsformen für den Mietkampf sind, findet ihr in dieser Broschüre im entsprechenden Kapitel.</p><h2>Finanzen und rechtliche Rahmenbedingungen</h2><p>Wenn eine Mietkampfgruppe strafrechtlich relevante Aktionen plant, ist das mit der Vollversammlung abzusprechen. Die Mietkampfgruppen können Geld von der Mietgewerkschaft bekommen, wenn dies für bestimmte Aktionen wie zum Beispiel das Drucken von Flyern benötigt wird. Sollte das Geld zur Verfügung stehen, werden 50  pro Aktion (gedeckelt auf 250  pro Mietkampfgruppe im Jahr) vom Buchführungs- und Kassenmandat bewilligt, wenn die Aktion im Einklang mit dem Konzept der Mietgewerkschaft steht. Für Anträge über mehr Geld oder wenn das Mandat unsicher ist, ob die Aktion im Einklang mit dem Konzept steht, wird das Anliegen auf der Vollversammlung besprochen und im Wege des Mehrheitsentscheids entschieden.</p><h2>Unterstützung und Mietkampfversammlung</h2><p>Zu Beginn können auch Leute, die in der Mietgewerkschaft aktiv sind, aber keine direkten Nachbar*innen sind, Teil einer Mietkampfgruppe werden, um sie beim Aufbau zu unterstützen. Die Mietkampfgruppe kann sich mit Fragen immer an die Gewerkschaft wenden. Es gibt außerdem ein Mietkampfmandat, also eine Person, die den Überblick über die laufenden Mietkämpfe und die Mietkampfversammlungen hat und die erste Ansprechperson für die Mietkampfgruppen ist.</p><p>Strategiefragen, Schwierigkeiten und Herausforderungen in der Mietkampfgruppe können bei der monatlichen Mietkampfversammlung besprochen werden. Alle Mietkampfgruppen sind verpflichtet, eine Person zu diesen Versammlungen zu schicken, die über den Gang des Mietkampfes berichtet. Die Versammlungen dauern maximal 1,5 Stunden, werden moderiert und protokolliert. Im Anschluss gibt es Raum für informellen Austausch bei Snacks und Getränken.</p><h2>Unabhängigkeit und Werte</h2><p>Als Mietgewerkschaft setzen wir auf unabhängige, außerparlamentarische Strukturen. Wir spielen nicht nach den Regeln politischer Parteien, um unbeeinflussbar und unkäuflich zu bleiben. Parteien sehen wir nicht als zuverlässige Verbündete an, da sie durch Sachzwänge nicht unabhängig handeln können. Wir arbeiten zudem nicht mit Gruppen zusammen, die grundlegend unseren emanzipatorischen Werten widersprechen. Diese Grundsätze gelten uneingeschränkt auch für alle Mietkampfgruppen.</p><h1>IV. So startest du eine Mietkampfgruppe&nbsp;</h1><p>1. Ersten Kontakt knüpfen: 
-Nimm zuerst Kontakt zu deinen Nachbar*innen auf. Du kannst bei ihnen klingeln und sie fragen, wie es ihnen mit der Hausverwaltung und/oder den Eigentümern geht. Erstelle z. B. eine WhatsApp-Gruppe für den einfacheren Austausch. Ein QR-Code mit dem Einladungslink im Treppenhaus hilft, alle zu erreichen.</p><p>2. Erstes Treffen organisieren: 
-Lade zu einem unverbindlichen Kennenlernen ein das muss kein strukturiertes Treffen sein. Ein gemeinsames Grillen im Hof oder Waffelessen im Wohnzimmer bietet einen guten Rahmen, um über die Wohnsituation und die Idee der Mietgewerkschaft zu sprechen.</p><p>3. Offizielle Gründung: 
-Wenn ihr euch entscheidet, eine Mietkampfgruppe zu werden, schließt jeweils als Einzelpersonen eine Mitgliedschaft bei der Mietgewerkschaft ab und besucht die nächste Mietkampfversammlung. Dort stellt ihr euch und euer Anliegen vor. Damit seid ihr offiziell gegründet und Teil der Mietgewerkschaft. Neumitglieder sind zudem herzlich zur alle drei Monate stattfindenden Einführungsveranstaltung eingeladen.</p><h1>V. Tipps und Hinweise für eure gemeinsame Arbeit&nbsp;</h1><h2>Vor dem Treffen:&nbsp;</h2><p>• Termin &amp; Ort: Nutzt Termin-Abstimmungs-Tools in eurer Chatgruppe. Wählt zugängliche Orte wie Wohnzimmer, Gemeinschaftsräume oder den Hinterhof.</p><p>• Rollenverteilung: Legt vorab fest, wer das Treffen vorbereitet, wer moderiert und wer protokolliert.</p><p>• Tagesordnung: Verschriftlicht eine Tagesordnung mit allen Sammelpunkten und plant bewusst Pausen ein.</p><h2>Während des Treffens:&nbsp;</h2><p>1. Ankommen &amp; Vorstellen: Kurze Runde zum Kennenlernen oder Abfragen des aktuellen Befindens.</p><p>2. Problemerfassung: Konkrete Themen sammeln, die euch als Nachbar*innen beschäftigen.</p><p>3. Strategieentwicklung: Gemeinsam passende Aktionsformen und Schritte diskutieren.</p><p>4. Aufgaben verteilen: Erstklassige Klarheit schaffen, wer welche Aufgaben bis zum nächsten Mal übernimmt.</p><p>5. Nächster Termin: Direkt den nächsten Termin sowie Moderation/Protokoll festlegen.</p><p>Tipp: Haltet Treffen zugänglich und angenehm durch Kinderbetreuung, Snacks oder ein getränk im Anschluss!</p><h2>Grundsatz: Worauf zu achten ist</h2><p>Ausgewogenheit: Achtet gemeinsam darauf, dass alle zu Wort kommen; ermutigt leise Personen.</p><p>Fokussierung: Verliert euch nicht in Diskussionen über Detailfragen einzelner Personen.</p><p>Kollektivität: Stellt sicher, dass Entscheidungen von der ganzen Gruppe getragen werden.</p><h2>Weiterführende Ressourcen:</h2><p>• Organizing-Handbuch der Mieter*innengewerkschaft Madrid (S. 23 ff.)</p><p>• Organizing-Werkzeugkasten "Gute Treffen Wachsende Gruppen" der Bewegungsschule</p><h1>VI. Eskalationsstufen für den Mietkampf&nbsp;</h1><p>Wir arbeiten nach einem Eskalationsstufenmodell. Das bedeutet, dass wir an Hausverwaltungen und Eigentümer Forderungen stellen und mit unterschiedlichen Aktionsformen steigend mehr Druck aufbauen.</p><p>Wichtig: Vor Beginn müsst ihr klare, eindeutige Forderungen formulieren. Diese bilden die Basis und sollten während des Kampfes möglichst nicht stark verändert werden.</p><h2>Stufe 1 (Vorbereitung):&nbsp;</h2><p>Konkrete Forderungen formulieren, schriftlich festhalten und in der Gruppe beschließen.</p><h2>Stufe 2 (1. Woche):&nbsp;</h2><p>Höfliches Schreiben mit Fristsetzung im Namen der Mietkampfgruppe an die Vermietung senden.</p><h2>Stufe 3 (3. Woche):&nbsp;</h2><p>Zweites Anschreiben mit juristischer Sprache &amp; Androhung von Öffentlichkeitsarbeit (oder Übergabe als Delegation).</p><h2>Stufe 4 (ab 5. Woche):&nbsp;</h2><p>Öffentliche Aktionen starten (Flyer, Postkarten, Telefonkampagne, Kundgebung, Banner).</p><h2>Stufe 5 (Nach Bedarf):&nbsp;</h2><p>Direktere Aktionsformen (Absprache mit dem Mietkampfmandat erforderlich).</p><h2>Stufe 6 (Nach Bedarf):&nbsp;</h2><p>Formelle Androhung einer Mietkürzung oder eines Mietstreiks.</p><h2>Stufe 7 (Nach Bedarf):&nbsp;</h2><p>Durchführung einer Mietkürzung oder eines Mietstreiks.</p><h1>VII. Mögliche Aktionsformen&nbsp;</h1><h2>1. Schreiben mit Androhung von Öffentlichkeitsarbeit&nbsp;</h2><p>Ein Brief an die Vermietung, der Forderungen erneut auflistet und ankündigt, diese öffentlichkeitswirksam durchzusetzen.</p><p>• Sinnvoll wenn: Ihr am Anfang steht, Stärke zeigen und der Vermietung signalisieren wollt, dass eine Organisation hinter euch steht.</p><p>• Orga: 1-2 Personen setzen das Schreiben auf. Nach Zustimmung der Gruppe per Post senden oder als Delegation übergeben.</p><h2>2. Telefonkampagnen&nbsp;</h2><p>• Sinnvoll für: Schnelle Ergebnisse und die Demonstration breiter Unterstützung (1-2 Orga-Personen, 10-25 Anrufende).</p><p>• Durchführung: Erstellt ein Skript (2-4 Sätze, z. B. "Ich fordere, dass Sie mit den Mieter*innen verhandeln..."). Verbreitet die Telefonnummer und das Zeitfenster (morgens/mittags, 2-3 Std.) per SharePic oder Flyer. Bei Verweigerung können SMS gesendet werden.</p><h2>3. Delegation&nbsp;</h2><p>Eine Gruppe überbringt persönlich eine Botschaft im Büro oder an der Haustür der Vermietung (optimal: 7-12 Personen).</p><p>• Vorbereitung: Betroffene Mieter*innen sollten das Schreiben überreichen. Spielt mögliche Szenarien vorher durch (Wut, Verweis vom Grundstück, Spaltungsversuche). Tretet geschlossen und selbstbewusst auf. Bringt Schilder, Transparente und Flyer mit.</p><h2>4. Flyer verteilen&nbsp;</h2><p>• Sinnvoll für: Schnelle Aktionen in der Nachbarschaft (ca. 150 Kopien) oder als Begleitung von Kundgebungen und Delegationen (5-7 Personen zum Verteilen).</p><p>• Wichtig: Alle Informationen strikt sachlich halten, um Verleumdungsklagen zu vermeiden. Bei Rechtsunsicherheiten Rücksprache mit der Mietkampfversammlung oder der "Gruppe für schnelle Entscheidungen" halten.</p><h2>5. Pressekonferenz&nbsp;</h2><p>• Sinnvoll bei: Aktionen oder Gerichtsterminen, um medialen Druck aufzubauen.</p><p>• Orga: Mehrere Redner*innen (max. 5 Min. pro Beitrag). Verfasst eine Pressemitteilung mit fetten Rahmendaten (mind. 48 Std. vorher versenden). Übt das Beantworten möglicher Fragen vorab.</p><h2>6. Postkartenaktion&nbsp;</h2><p>• Sinnvoll bei: Kleinere Vermieter*innen/Eigentümer.</p><p>• Durchführung: Eindringliche Motive (z. B. Fotos von Mängeln) wählen. Postkarten von vielen Unterstützer*innen unterschreiben lassen und gestaffelt versenden, damit täglich neue Post beim Vermieter eingeht.</p><h2>7. Banner-Aktion&nbsp;</h2><p>• Sinnvoll für: Kundgebungen, Demos oder direkte Sichtbarkeit am Gebäude.</p><p>• Durchführung: Prägnanten Spruch entwerfen, Digitaldesign mittels Beamer auf Leinwand übertragen und ausmalen. Am oberen Rand Ösen/Seile anbringen, unten Beschwerung (z. B. Stöcke/Sandsäcke) befestigen.</p><h2>8. Kundgebung&nbsp;</h2><p>• Sinnvoll bei: Verweigerung der Vermietung, um Aufmerksamkeit und Geschlossenheit zu zeigen.</p><p>• Orga: 1-2 Wochen Vorlauf, 3-5 Orga-Personen. Kundgebung mindestens 48 Stunden vorher bei der Versammlungsbehörde anmelden (in Leipzig online möglich). Versammlungsleitung und Motto benennen.</p><h2>9. Besetzung von Büros&nbsp;</h2><p>Belagerung der Räumlichkeiten der Hausverwaltung/Vermietung bis zur Verhandlungsbereitschaft. Beratung zu historischen Beispielen und Vorgehen erfolgt über das Mietkampfmandat.</p><h2>10. Mietkürzungen und Mietstreiks&nbsp;</h2><p>Die zeitweise Einbehaltung von Teilen oder der gesamten Miete.</p><p>• Voraussetzungen: Hoher Organisationsgrad unter den Mieter*innen, Verhandlungsverweigerung der Gegenseite, hohe Risikobereitschaft aller Beteiligten.</p><p>• Mögliche Konsequenzen: Bei Rückständen von zwei Monatsmieten droht die fristlose Kündigung und Räumungsklage. Eine Kündigung ist jedoch unwirksam, wenn Mietmängel vorliegen oder die Miete innerhalb von 2 Monaten nach Klageerhebung nachgezahlt wird.</p><p>• Durchführung: Ausführliche Beratung auf der Mietkampfversammlung, Vorankündigung von 2 Wochen an den Vermieter, begleitende intensive Öffentlichkeitsarbeit.</p><h1>VIII. Kontakt 
-bei Fragen&nbsp;</h1><p>Bei allen allgemeinen und internen Fragen wendet euch an die zentrale Kontaktstelle:</p><p>• E-Mail Kontaktstelle: kontaktstelle_mietgew_le@systemli.org</p><p>Bei spezifischen Anliegen zu Mietkämpfen, Strategien und Eskalationsstufen ist das Mietkampfmandat eure erste Ansprechperson.</p></div>
+        <div id="pip-content" contenteditable="true" spellcheck="false"></div>
     </aside>
+
+    <!-- Preflight Modal -->
+    <div id="preflight-modal">
+        <div class="modal-card">
+            <div class="modal-header">Preflight Options</div>
+            <div class="modal-body">
+                <div class="control-group">
+                    <label>Print Layout & Imposition</label>
+                    <select id="preflight-layout">
+                        <option value="single">Single Pages (Standard)</option>
+                        <option value="booklet">Magazine / Booklet (2-Up Spreads)</option>
+                    </select>
+                </div>
+                <div class="control-group checkbox-row" style="margin-top: 8px;">
+                    <input type="checkbox" id="preflight-marks">
+                    <label for="preflight-marks">Include Center Folding Marks</label>
+                </div>
+                <div class="help-text">
+                    Booklet mode automatically rearranges pagination into "Printer's Spreads" and doubles the physical sheet width.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="style-btn" id="btn-cancel-preflight">Cancel</button>
+                <button class="style-btn assign-btn" id="btn-execute-export">Export PDF</button>
+            </div>
+        </div>
+    </div>
 
     <script>
         class TypesettingEngine {
@@ -1092,6 +1138,16 @@ bei Fragen&nbsp;</h1><p>Bei allen allgemeinen und internen Fragen wendet euch an
                 }
                 
                 this.updateFromPIP();
+            }
+
+            updatePrintStyle(width, height) {
+                let style = document.getElementById('print-page-style');
+                if (!style) {
+                    style = document.createElement('style');
+                    style.id = 'print-page-style';
+                    document.head.appendChild(style);
+                }
+                style.innerHTML = `@media print { @page { size: ${width} ${height}; margin: 0; } }`;
             }
 
             initWorkspace() {
@@ -1517,24 +1573,95 @@ bei Fragen&nbsp;</h1><p>Bei allen allgemeinen und internen Fragen wendet euch an
                     if(el) el.addEventListener('input', () => this.queueReflow());
                 });
 
-                document.getElementById('btn-export').addEventListener('click', () => {
-                    // Temporarily change document title for a cleaner default PDF filename
+                // Preflight & Export Logic
+                const preflightModal = document.getElementById('preflight-modal');
+                document.getElementById('btn-open-preflight').addEventListener('click', () => {
+                    preflightModal.classList.add('visible');
+                });
+                document.getElementById('btn-cancel-preflight').addEventListener('click', () => {
+                    preflightModal.classList.remove('visible');
+                });
+                
+                document.getElementById('btn-execute-export').addEventListener('click', () => {
+                    preflightModal.classList.remove('visible');
+                    this.executeImposedExport();
+                });
+            }
+
+            executeImposedExport() {
+                const layoutMode = document.getElementById('preflight-layout').value;
+                const includeMarks = document.getElementById('preflight-marks').checked;
+                
+                const wStr = getComputedStyle(document.documentElement).getPropertyValue('--doc-width').trim();
+                const hStr = getComputedStyle(document.documentElement).getPropertyValue('--doc-height').trim();
+                const w = parseFloat(wStr);
+                const h = parseFloat(hStr);
+
+                // Cache original DOM state to revert after print dialog closes
+                const originalContainerHTML = this.docContainer.innerHTML;
+
+                if (layoutMode === 'booklet') {
+                    // Turn on specific CSS print classes
+                    document.body.classList.add('print-booklet');
+                    if (includeMarks) document.body.classList.add('print-marks');
+
+                    // Extract all current physical pages
+                    const originalPages = Array.from(this.docContainer.querySelectorAll('.page'));
+                    
+                    // Imposition Math: Booklets must have a page count divisible by 4. Pad with blanks if needed.
+                    let totalPages = originalPages.length;
+                    while (totalPages % 4 !== 0) {
+                        const blank = document.createElement('div');
+                        blank.className = 'page blank-page';
+                        blank.innerHTML = '<div class="page-content"></div>';
+                        originalPages.push(blank);
+                        totalPages++;
+                    }
+
+                    this.docContainer.innerHTML = ''; // Clear canvas
+                    
+                    // Generate Printer Spreads: [last, first], [second, second-to-last], etc.
+                    for (let i = 0; i < totalPages / 2; i++) {
+                        const sheet = document.createElement('div');
+                        sheet.className = 'sheet';
+                        
+                        let leftIndex, rightIndex;
+                        if (i % 2 === 0) { // Outside spread (e.g., [8, 1])
+                            leftIndex = totalPages - 1 - i;
+                            rightIndex = i;
+                        } else { // Inside spread (e.g., [2, 7])
+                            leftIndex = i;
+                            rightIndex = totalPages - 1 - i;
+                        }
+                        
+                        sheet.appendChild(originalPages[leftIndex].cloneNode(true));
+                        sheet.appendChild(originalPages[rightIndex].cloneNode(true));
+                        this.docContainer.appendChild(sheet);
+                    }
+                    
+                    // Set print page size to double the width (e.g. A5 pages print onto A4 landscape)
+                    this.updatePrintStyle((w * 2) + 'mm', h + 'mm');
+                } else {
+                    // Standard single page export
+                    document.body.classList.remove('print-booklet', 'print-marks');
+                    this.updatePrintStyle(w + 'mm', h + 'mm');
+                }
+
+                // Small timeout allows the DOM and CSS to update before the browser locks the thread for printing
+                setTimeout(() => {
                     const originalTitle = document.title;
                     document.title = "Procedural_Typesetting_Export";
                     window.print();
                     document.title = originalTitle;
-                });
-            }
-
-            updatePrintStyle(width, height) {
-                let styleEl = document.getElementById('print-style');
-                if (!styleEl) {
-                    styleEl = document.createElement('style');
-                    styleEl.id = 'print-style';
-                    document.head.appendChild(styleEl);
-                }
-                // Inject actual physical dimensions into the print dialog to strip margins/headers natively
-                styleEl.innerHTML = `@media print { @page { size: ${width} ${height}; margin: 0; } }`;
+                    
+                    // The onafterprint event reverts the layout back to the standard web workspace view
+                    window.onafterprint = () => {
+                        this.docContainer.innerHTML = originalContainerHTML;
+                        document.body.classList.remove('print-booklet', 'print-marks');
+                        this.updatePrintStyle(w + 'mm', h + 'mm');
+                        window.onafterprint = null;
+                    };
+                }, 150);
             }
 
             initTextUploader() {
